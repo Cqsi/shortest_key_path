@@ -5,7 +5,8 @@ An interactive visualizer inspired by LeetCode 864, “Shortest Path to Get All 
 ## Features
 
 - Editable grids from 3×3 to 30×30
-- Compact dock with settings, Figma-style pointer, eraser, add, and run controls
+- Compact dock with a centered add button, Figma-style pointer, eraser, settings, and run controls
+- Bubbly add-menu motion that stays open while tools are selected and used
 - Grid dimensions in a two-row settings popover
 - Bold wall and person pictograms, one start tile, and color-matched A–Z key/lock pairs
 - Up to 26 distinct keys and locks using a BigInt bitmask

@@ -24,24 +24,14 @@
       </div>
 
       <div class="toolbar" aria-label="Grid controls">
-        <div class="popover-anchor">
-          <button class="icon-button" id="settingsButton" type="button" aria-label="Grid settings" aria-expanded="false" data-tip="Settings">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15a1.7 1.7 0 0 0-1.55-1.03H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63a1.7 1.7 0 0 0 1.03-1.55V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9a1.7 1.7 0 0 0 1.55 1.03H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"></path></svg>
-          </button>
-          <div class="popover settings-popover" id="settingsPopover" role="dialog" aria-label="Grid size" hidden>
-            <label><span>Rows</span><input id="rowInput" type="number" min="3" max="30" value="8" /></label>
-            <label><span>Columns</span><input id="colInput" type="number" min="3" max="30" value="12" /></label>
-          </div>
-        </div>
-
-        <span class="divider" aria-hidden="true"></span>
-
         <button class="tool direct-tool active" data-tool="pan" type="button" aria-pressed="true" aria-label="Move grid" data-tip="Move">
           <svg class="pointer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5 18.2 12l-6.1 1.25L9 19.1 5 3.5Z"></path></svg>
         </button>
         <button class="tool direct-tool" data-tool="erase" type="button" aria-pressed="false" aria-label="Erase" data-tip="Erase">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4.2 14.3 8.9-8.9a2 2 0 0 1 2.8 0l2.7 2.7a2 2 0 0 1 0 2.8l-8.9 8.9H5.8l-1.6-1.6a2.8 2.8 0 0 1 0-3.9Z"></path><path d="m10.2 8.3 5.5 5.5M9.7 19.8H20"></path></svg>
         </button>
+
+        <span class="divider" aria-hidden="true"></span>
 
         <div class="popover-anchor">
           <button class="icon-button add-button" id="addButton" type="button" aria-label="Add to grid" aria-expanded="false" data-tip="Add">
@@ -59,6 +49,16 @@
         </div>
 
         <span class="divider" aria-hidden="true"></span>
+
+        <div class="popover-anchor">
+          <button class="icon-button" id="settingsButton" type="button" aria-label="Grid settings" aria-expanded="false" data-tip="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5M15 7h5M4 12h9M19 12h1M4 17h2M12 17h8"></path><circle cx="12" cy="7" r="2"></circle><circle cx="16" cy="12" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg>
+          </button>
+          <div class="popover settings-popover" id="settingsPopover" role="dialog" aria-label="Grid size" hidden>
+            <label><span>Rows</span><input id="rowInput" type="number" min="3" max="30" value="8" /></label>
+            <label><span>Columns</span><input id="colInput" type="number" min="3" max="30" value="12" /></label>
+          </div>
+        </div>
 
         <button class="run" id="runButton" type="button" aria-label="Run breadth-first search" data-tip="Run"><span id="runIcon">▶</span></button>
       </div>

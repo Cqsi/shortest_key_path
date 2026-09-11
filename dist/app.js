@@ -186,7 +186,9 @@
       button.addEventListener("click", () => {
         selectedLockLetter = letter;
         setTool("lock");
-        closePopovers();
+        els.lockTool.style.color = colorForLetter(letter);
+        els.lockPicker.hidden = true;
+        els.lockButton.setAttribute("aria-expanded", "false");
       });
       els.lockChoices.append(button);
     });
@@ -200,7 +202,8 @@
     }
     selectedKeyLetter = next;
     setTool("key");
-    closePopovers();
+    els.lockPicker.hidden = true;
+    els.lockButton.setAttribute("aria-expanded", "false");
   }
 
   function openLockPicker() {
@@ -573,7 +576,8 @@
   els.addButton.addEventListener("click", () => togglePopover("add"));
   $$('.menu-tool[data-tool="wall"], .menu-tool[data-tool="start"]').forEach((button) => button.addEventListener("click", () => {
     setTool(button.dataset.tool);
-    closePopovers();
+    els.lockPicker.hidden = true;
+    els.lockButton.setAttribute("aria-expanded", "false");
   }));
   $("#keyMenuButton").addEventListener("click", selectNextKey);
   els.lockButton.addEventListener("click", openLockPicker);
@@ -589,7 +593,10 @@
   });
 
   document.addEventListener("pointerdown", (event) => {
-    if (!event.target.closest(".toolbar")) closePopovers();
+    if (!event.target.closest(".toolbar")) {
+      els.settingsPopover.hidden = true;
+      els.settingsButton.setAttribute("aria-expanded", "false");
+    }
   });
 
   els.grid.addEventListener("pointerdown", (event) => {
@@ -600,6 +607,10 @@
   });
   els.grid.addEventListener("pointerover", (event) => {
     const cell = event.target.closest(".cell");
+    if (!(event.buttons & 1)) {
+      isPainting = false;
+      return;
+    }
     if (!cell || !isPainting || !["wall", "erase"].includes(selectedTool)) return;
     paintCell(Number(cell.dataset.row), Number(cell.dataset.col));
   });
