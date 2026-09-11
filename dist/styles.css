@@ -14,7 +14,8 @@
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; }
 body { margin: 0; overflow: hidden; background: var(--background); color: var(--ink); }
-button, input, select { font: inherit; }
+button, input { font: inherit; }
+[hidden] { display: none !important; }
 
 .app { position: relative; width: 100%; height: 100%; overflow: hidden; }
 .grid-viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
@@ -88,9 +89,9 @@ button, input, select { font: inherit; }
   backdrop-filter: blur(12px);
   transform: translateX(-50%);
 }
-.control-group { display: flex; align-items: center; gap: 4px; }
+.popover-anchor { position: relative; display: grid; }
 .divider { width: 1px; height: 24px; margin: 0 3px; background: #e3e3e3; }
-button, select, input {
+button, input {
   height: 38px;
   border: 0;
   border-radius: 9px;
@@ -105,27 +106,45 @@ button {
   cursor: pointer;
   transition: color 130ms ease, background-color 130ms ease, transform 130ms ease;
 }
-button:hover, select:hover, input:hover { background: #f2f2f2; }
+button:hover, input:hover { background: #f2f2f2; }
 button:active { transform: scale(.94); }
-button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+button:disabled { opacity: .35; cursor: not-allowed; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.icon-button, .tool, .run { display: grid; place-items: center; padding: 0; }
+.icon-button svg, .tool svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .tool { font: 500 15px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
-.tool svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.tool svg { stroke-width: 2.5; }
+.pointer-icon { fill: currentColor !important; stroke-width: 1.8 !important; }
 .tool.active { background: var(--ink); color: white; }
-.letter-tool { font-size: 16px; }
-.letter-tool > span { display: grid; width: 20px; height: 20px; place-items: center; }
+.add-button.active { background: var(--ink); color: white; }
+.menu-tool > span { display: grid; place-items: center; }
 .run { background: var(--ink); color: white; }
 .run:hover { background: #222; }
 .run.running { background: var(--blue); }
-.dimensions input {
-  width: 39px;
-  padding: 0 3px;
-  text-align: center;
-  font-size: 12px;
-  -moz-appearance: textfield;
+
+.popover {
+  position: absolute;
+  z-index: 25;
+  bottom: calc(100% + 11px);
+  padding: 7px;
+  border: 1px solid #d7d7d7;
+  border-radius: 12px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 8px 28px rgba(0,0,0,.11);
+  backdrop-filter: blur(12px);
 }
-.dimensions input::-webkit-inner-spin-button { appearance: none; }
-.dimensions > span { color: #aaa; font: 12px/1 ui-monospace, monospace; }
-#letterSelect { width: 40px; padding: 0 5px; font-size: 12px; }
+.settings-popover { left: 0; width: 184px; padding: 8px 10px; }
+.settings-popover label { min-height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: #303030; font-size: 14px; }
+.settings-popover input { width: 58px; height: 30px; padding: 0 8px; border: 1px solid #dedede; border-radius: 7px; text-align: right; font: 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; background: #fff; }
+.settings-popover input:focus { border-color: #888; }
+.settings-popover input::-webkit-inner-spin-button { opacity: .65; }
+.add-popover { right: 0; display: grid; grid-template-columns: repeat(4, 42px); gap: 3px; }
+.menu-tool { width: 42px; min-width: 42px; height: 42px; }
+.menu-tool.active { background: #ededed; color: var(--ink); }
+.lock-picker { position: absolute; left: calc(100% + 9px); bottom: 0; padding: 7px; border: 1px solid #d7d7d7; border-radius: 12px; background: rgba(255,255,255,.98); box-shadow: 0 8px 28px rgba(0,0,0,.11); }
+#lockChoices { display: grid; gap: 3px; }
+.lock-choice { width: 36px; min-width: 36px; height: 36px; display: grid; place-items: center; padding: 0; }
+.lock-choice svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
 button[data-tip]::after {
   content: attr(data-tip);
@@ -170,11 +189,10 @@ button[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0); }
 @keyframes drawPath { from { stroke-dashoffset: var(--path-length); } to { stroke-dashoffset: 0; } }
 
 @media (max-width: 700px) {
-  .toolbar { overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
-  .toolbar::-webkit-scrollbar { display: none; }
-  .dimensions input { width: 35px; }
+  .toolbar { bottom: 14px; }
   .divider { margin: 0 1px; }
   button { min-width: 36px; height: 36px; padding: 0 8px; }
+  .lock-picker { left: auto; right: calc(100% + 9px); }
   button[data-tip]::after { display: none; }
 }
 

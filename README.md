@@ -5,8 +5,11 @@ An interactive visualizer inspired by LeetCode 864, “Shortest Path to Get All 
 ## Features
 
 - Editable grids from 3×3 to 30×30
+- Compact dock with settings, Figma-style pointer, eraser, add, and run controls
+- Grid dimensions in a two-row settings popover
 - Bold wall and person pictograms, one start tile, and color-matched A–Z key/lock pairs
 - Up to 26 distinct keys and locks using a BigInt bitmask
+- Keys are assigned in a fixed color sequence; locks can only be paired with an existing, unmatched key color
 - Infinite-canvas-style panning with a move tool, two-finger trackpad scrolling, space-drag, middle-drag, or right-drag
 - Cursor-centered trackpad pinch and mouse-wheel zoom with no persistent zoom controls
 - Colored key and lock pictograms for all 26 letter pairs, without letter labels in the cells

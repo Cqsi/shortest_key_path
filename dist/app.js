@@ -12,7 +12,15 @@
     line: $("#pathLine"),
     rows: $("#rowInput"),
     cols: $("#colInput"),
-    letter: $("#letterSelect"),
+    settingsButton: $("#settingsButton"),
+    settingsPopover: $("#settingsPopover"),
+    addButton: $("#addButton"),
+    addPopover: $("#addPopover"),
+    lockButton: $("#lockMenuButton"),
+    lockPicker: $("#lockPicker"),
+    lockChoices: $("#lockChoices"),
+    wallTool: $("#wallToolGlyph"),
+    startTool: $("#startToolGlyph"),
     keyTool: $("#keyToolGlyph"),
     lockTool: $("#lockToolGlyph"),
     run: $("#runButton"),
@@ -23,9 +31,9 @@
 
   const sample = [
     "............",
-    ".@...#....f.",
+    ".@...#....c.",
     ".###.#.####.",
-    ".a...#...F..",
+    ".a...#...C..",
     ".###.###.#..",
     ".b.B.....#..",
     ".#####.###..",
@@ -48,6 +56,8 @@
   let panY = 0;
   let lastPath = null;
   let lastResult = null;
+  let selectedKeyLetter = "a";
+  let selectedLockLetter = null;
   let toastTimer;
 
   const keyIcon = () => `
@@ -75,36 +85,62 @@
       <path d="M2.5 9.3h19M2.5 14.7h19M8.8 4v5.3M15.2 4v5.3M6 9.3v5.4M13 9.3v5.4M18.2 9.3v5.4M8.8 14.7V20M15.2 14.7V20"></path>
     </svg>`;
 
-  for (let code = 65; code <= 90; code += 1) {
-    const option = document.createElement("option");
-    option.value = String.fromCharCode(code).toLowerCase();
-    option.textContent = String.fromCharCode(code);
-    els.letter.append(option);
-  }
-
   function colorForLetter(letter) {
     const index = letter.toLowerCase().charCodeAt(0) - 97;
-    const hue = (24 + index * 47) % 360;
-    return `hsl(${hue} 70% 48%)`;
+    const hue = (20 + index * 137.508) % 360;
+    const lightness = index % 3 === 1 ? 42 : 49;
+    return `hsl(${hue} 72% ${lightness}%)`;
   }
 
-  function updateLetterTools() {
-    const color = colorForLetter(els.letter.value);
+  function gridLetters(pattern) {
+    const found = new Set();
+    cells.forEach((line) => line.forEach((value) => {
+      if (pattern.test(value)) found.add(value.toLowerCase());
+    }));
+    return [...found].sort();
+  }
+
+  function nextUnusedKey() {
+    const used = new Set(gridLetters(/[a-z]/));
+    for (let code = 97; code <= 122; code += 1) {
+      const letter = String.fromCharCode(code);
+      if (!used.has(letter)) return letter;
+    }
+    return null;
+  }
+
+  function availableLocks() {
+    const keys = gridLetters(/[a-z]/);
+    const locks = new Set(gridLetters(/[A-Z]/));
+    return keys.filter((letter) => !locks.has(letter));
+  }
+
+  function updateAddMenu() {
+    selectedKeyLetter = nextUnusedKey();
+    const lockLetters = availableLocks();
+    const previewLock = selectedLockLetter && lockLetters.includes(selectedLockLetter)
+      ? selectedLockLetter
+      : lockLetters[0] || gridLetters(/[a-z]/)[0] || "a";
+
+    els.wallTool.innerHTML = wallIcon();
+    els.startTool.innerHTML = personIcon();
     els.keyTool.innerHTML = keyIcon();
     els.lockTool.innerHTML = lockIcon();
-    els.keyTool.style.color = color;
-    els.lockTool.style.color = color;
-  }
-
-  function updateStaticTools() {
-    const wallTool = $('[data-tool="wall"]');
-    const startTool = $('[data-tool="start"]');
-    wallTool.innerHTML = wallIcon();
-    startTool.innerHTML = personIcon();
+    els.keyTool.style.color = colorForLetter(selectedKeyLetter || "a");
+    els.lockTool.style.color = colorForLetter(previewLock);
+    $("#keyMenuButton").disabled = !selectedKeyLetter;
+    renderLockChoices(lockLetters);
   }
 
   function blankGrid(nextRows, nextCols) {
     return Array.from({ length: nextRows }, () => Array(nextCols).fill("."));
+  }
+
+  function removeOrphanLocks() {
+    const keys = new Set(gridLetters(/[a-z]/));
+    cells.forEach((line, row) => line.forEach((value, col) => {
+      if (/[A-Z]/.test(value) && !keys.has(value.toLowerCase())) cells[row][col] = ".";
+    }));
   }
 
   function showToast(message) {
@@ -112,6 +148,74 @@
     els.toast.textContent = message;
     els.toast.classList.add("show");
     toastTimer = setTimeout(() => els.toast.classList.remove("show"), 2200);
+  }
+
+  function closePopovers() {
+    els.settingsPopover.hidden = true;
+    els.settingsButton.setAttribute("aria-expanded", "false");
+    els.addPopover.hidden = true;
+    els.addButton.setAttribute("aria-expanded", "false");
+    els.lockPicker.hidden = true;
+    els.lockButton.setAttribute("aria-expanded", "false");
+  }
+
+  function togglePopover(name) {
+    const popover = name === "settings" ? els.settingsPopover : els.addPopover;
+    const button = name === "settings" ? els.settingsButton : els.addButton;
+    const opening = popover.hidden;
+    closePopovers();
+    if (opening) {
+      popover.hidden = false;
+      button.setAttribute("aria-expanded", "true");
+    }
+    if (opening && name === "add") updateAddMenu();
+    if (opening && name === "settings") requestAnimationFrame(() => els.rows.focus());
+  }
+
+  function renderLockChoices(letters = availableLocks()) {
+    els.lockChoices.replaceChildren();
+    els.lockChoices.style.gridTemplateColumns = `repeat(${Math.min(4, Math.max(1, letters.length))}, 36px)`;
+    letters.forEach((letter) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "lock-choice";
+      button.setAttribute("role", "menuitem");
+      button.setAttribute("aria-label", `Lock matching key ${letter.toUpperCase()}`);
+      button.style.color = colorForLetter(letter);
+      button.innerHTML = lockIcon();
+      button.addEventListener("click", () => {
+        selectedLockLetter = letter;
+        setTool("lock");
+        closePopovers();
+      });
+      els.lockChoices.append(button);
+    });
+  }
+
+  function selectNextKey() {
+    const next = nextUnusedKey();
+    if (!next) {
+      showToast("All 26 keys are already on the grid.");
+      return;
+    }
+    selectedKeyLetter = next;
+    setTool("key");
+    closePopovers();
+  }
+
+  function openLockPicker() {
+    const choices = availableLocks();
+    if (!gridLetters(/[a-z]/).length) {
+      showToast("Place a key first.");
+      return;
+    }
+    if (!choices.length) {
+      showToast("Every key already has a matching lock.");
+      return;
+    }
+    renderLockChoices(choices);
+    els.lockPicker.hidden = !els.lockPicker.hidden;
+    els.lockButton.setAttribute("aria-expanded", String(!els.lockPicker.hidden));
   }
 
   function classFor(value) {
@@ -159,6 +263,7 @@
       fragment.append(cell);
     }));
     els.grid.append(fragment);
+    updateAddMenu();
     clearPath();
   }
 
@@ -195,29 +300,49 @@
     $$(".tool").forEach((button) => {
       const active = button.dataset.tool === tool;
       button.classList.toggle("active", active);
-      button.setAttribute("aria-checked", String(active));
+      if (button.hasAttribute("aria-pressed")) button.setAttribute("aria-pressed", String(active));
     });
+    els.addButton.classList.toggle("active", ["wall", "start", "key", "lock"].includes(tool));
   }
 
   function valueForTool() {
     if (selectedTool === "wall") return "#";
     if (selectedTool === "start") return "@";
-    if (selectedTool === "key") return els.letter.value;
-    if (selectedTool === "lock") return els.letter.value.toUpperCase();
+    if (selectedTool === "key") return selectedKeyLetter;
+    if (selectedTool === "lock") return selectedLockLetter?.toUpperCase() || ".";
     return ".";
   }
 
   function paintCell(r, c) {
     if (selectedTool === "pan" || spaceHeld || isPanning) return;
     const value = valueForTool();
+    const previousValue = cells[r][c];
+    if (["key", "lock"].includes(selectedTool) && /[a-zA-Z]/.test(previousValue)) {
+      showToast("Choose a cell without a key or lock.");
+      return;
+    }
+    if (/[a-z]/.test(previousValue) && previousValue !== value) {
+      const matchingLock = previousValue.toUpperCase();
+      cells.forEach((line, row) => line.forEach((cell, col) => {
+        if (cell === matchingLock) cells[row][col] = ".";
+      }));
+    }
     if (value === "@") {
       cells.forEach((line, row) => line.forEach((cell, col) => {
         if (cell === "@") cells[row][col] = ".";
       }));
     }
     cells[r][c] = value;
+    if (selectedTool === "key") selectedKeyLetter = null;
+    if (selectedTool === "lock") selectedLockLetter = null;
     renderGrid();
     resetResult("Grid updated");
+    if (selectedTool === "key") {
+      const next = nextUnusedKey();
+      if (next) selectedKeyLetter = next;
+      else setTool("pan");
+    }
+    if (selectedTool === "lock") setTool("pan");
   }
 
   function applyGridSize() {
@@ -230,6 +355,7 @@
     rows = nextRows;
     cols = nextCols;
     cells = next;
+    removeOrphanLocks();
     els.rows.value = rows;
     els.cols.value = cols;
     renderGrid();
@@ -439,10 +565,32 @@
     els.viewport.setPointerCapture(event.pointerId);
   }
 
-  $$(".tool").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
-  $("#applySize").addEventListener("click", applyGridSize);
-  els.letter.addEventListener("change", updateLetterTools);
-  els.run.addEventListener("click", solve);
+  $$(".direct-tool").forEach((button) => button.addEventListener("click", () => {
+    setTool(button.dataset.tool);
+    closePopovers();
+  }));
+  els.settingsButton.addEventListener("click", () => togglePopover("settings"));
+  els.addButton.addEventListener("click", () => togglePopover("add"));
+  $$('.menu-tool[data-tool="wall"], .menu-tool[data-tool="start"]').forEach((button) => button.addEventListener("click", () => {
+    setTool(button.dataset.tool);
+    closePopovers();
+  }));
+  $("#keyMenuButton").addEventListener("click", selectNextKey);
+  els.lockButton.addEventListener("click", openLockPicker);
+  [els.rows, els.cols].forEach((input) => {
+    input.addEventListener("change", applyGridSize);
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") input.blur();
+    });
+  });
+  els.run.addEventListener("click", () => {
+    closePopovers();
+    solve();
+  });
+
+  document.addEventListener("pointerdown", (event) => {
+    if (!event.target.closest(".toolbar")) closePopovers();
+  });
 
   els.grid.addEventListener("pointerdown", (event) => {
     const cell = event.target.closest(".cell");
@@ -486,14 +634,25 @@
     els.viewport.classList.remove("is-panning");
   });
   window.addEventListener("keydown", (event) => {
-    if (["INPUT", "SELECT"].includes(document.activeElement.tagName)) return;
+    if (document.activeElement.tagName === "INPUT") return;
     if (event.code === "Space") {
       event.preventDefault();
       spaceHeld = true;
       return;
     }
-    const tools = { p: "pan", w: "wall", e: "erase", s: "start", k: "key", l: "lock" };
-    if (tools[event.key.toLowerCase()]) setTool(tools[event.key.toLowerCase()]);
+    if (event.key === "Escape") {
+      closePopovers();
+      return;
+    }
+    const key = event.key.toLowerCase();
+    const tools = { p: "pan", w: "wall", e: "erase", s: "start" };
+    if (tools[key]) setTool(tools[key]);
+    if (key === "k") selectNextKey();
+    if (key === "l") {
+      els.addPopover.hidden = false;
+      els.addButton.setAttribute("aria-expanded", "true");
+      openLockPicker();
+    }
   });
   window.addEventListener("keyup", (event) => {
     if (event.code === "Space") spaceHeld = false;
@@ -542,8 +701,6 @@
 
   renderGrid();
   setTool("pan");
-  updateStaticTools();
-  updateLetterTools();
   requestAnimationFrame(centerGrid);
   registerWebMCP();
 })();
