@@ -1,0 +1,28 @@
+# Shortest Key Path
+
+An interactive visualizer inspired by LeetCode 864, “Shortest Path to Get All Keys.” Design a maze, place keys and locks, then watch breadth-first search animate the optimal route.
+
+## Features
+
+- Editable grids from 3×3 to 30×30
+- Wall painting, one start tile, and A–Z key/lock pairs
+- Up to 26 distinct keys and locks using a BigInt bitmask
+- Zoom, pan, keyboard shortcuts, and touch-friendly controls
+- Animated optimal path with minimum steps, search states, and key order
+- Chunked BFS with a one-million-state safety limit to keep the page responsive
+
+## Run locally
+
+Serve the `dist` directory with any static file server, for example:
+
+```bash
+python3 -m http.server 4173 --directory dist
+```
+
+Then open `http://localhost:4173`.
+
+## Algorithm
+
+Each BFS state is `(row, column, keyMask)`. A route may revisit the same cell after collecting a different set of keys, so position alone is not enough for the visited set. Because BFS explores routes in increasing step count, the first state containing every key is optimal.
+
+Time and space are bounded by `O(rows × columns × 2^k)` in the worst case.
