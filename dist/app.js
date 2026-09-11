@@ -64,6 +64,16 @@
       <circle cx="12" cy="15.5" r="1.1"></circle>
       <path d="M12 16.6V19"></path>
     </svg>`;
+  const personIcon = () => `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="7" r="3.2"></circle>
+      <path d="M5.5 20a6.5 6.5 0 0 1 13 0"></path>
+    </svg>`;
+  const wallIcon = () => `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="2.5" y="4" width="19" height="16" rx="1"></rect>
+      <path d="M2.5 9.3h19M2.5 14.7h19M8.8 4v5.3M15.2 4v5.3M6 9.3v5.4M13 9.3v5.4M18.2 9.3v5.4M8.8 14.7V20M15.2 14.7V20"></path>
+    </svg>`;
 
   for (let code = 65; code <= 90; code += 1) {
     const option = document.createElement("option");
@@ -84,6 +94,13 @@
     els.lockTool.innerHTML = lockIcon();
     els.keyTool.style.color = color;
     els.lockTool.style.color = color;
+  }
+
+  function updateStaticTools() {
+    const wallTool = $('[data-tool="wall"]');
+    const startTool = $('[data-tool="start"]');
+    wallTool.innerHTML = wallIcon();
+    startTool.innerHTML = personIcon();
   }
 
   function blankGrid(nextRows, nextCols) {
@@ -115,10 +132,10 @@
   }
 
   function tileMarkup(value) {
-    if (value === "#" || value === "@") return value;
+    if (value === "#") return wallIcon();
+    if (value === "@") return personIcon();
     if (!/[a-zA-Z]/.test(value)) return "";
-    const icon = /[a-z]/.test(value) ? keyIcon() : lockIcon();
-    return `${icon}<span class="tile-letter">${value}</span>`;
+    return /[a-z]/.test(value) ? keyIcon() : lockIcon();
   }
 
   function renderGrid() {
@@ -168,12 +185,13 @@
     lastPath = null;
     [els.halo, els.line].forEach((line) => {
       line.classList.remove("animate");
-      line.setAttribute("points", "");
+      line.setAttribute("d", "");
     });
   }
 
   function setTool(tool) {
     selectedTool = tool;
+    els.viewport.classList.toggle("pan-mode", tool === "pan");
     $$(".tool").forEach((button) => {
       const active = button.dataset.tool === tool;
       button.classList.toggle("active", active);
@@ -320,17 +338,66 @@
     animatePath(ids.map(parseState));
   }
 
+  function roundedPathData(path) {
+    const points = path.map(([r, c]) => ({
+      x: c * baseCellSize + baseCellSize / 2,
+      y: r * baseCellSize + baseCellSize / 2,
+    }));
+    if (!points.length) return "";
+    if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+    const same = (a, b) => a.x === b.x && a.y === b.y;
+    const unit = (a, b) => {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.hypot(dx, dy) || 1;
+      return { x: dx / length, y: dy / length };
+    };
+    let data = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 1; i < points.length; i += 1) {
+      const previous = points[i - 1];
+      const current = points[i];
+      const next = points[i + 1];
+
+      if (next && same(previous, next)) {
+        const incoming = unit(previous, current);
+        const side = i % 2 ? 1 : -1;
+        const perpendicular = { x: -incoming.y * side, y: incoming.x * side };
+        const loopWidth = baseCellSize * .3;
+        data += ` L ${current.x} ${current.y}`;
+        data += ` C ${current.x + perpendicular.x * loopWidth} ${current.y + perpendicular.y * loopWidth}`;
+        data += ` ${next.x + perpendicular.x * loopWidth} ${next.y + perpendicular.y * loopWidth}`;
+        data += ` ${next.x} ${next.y}`;
+        i += 1;
+        continue;
+      }
+
+      if (next) {
+        const incoming = unit(previous, current);
+        const outgoing = unit(current, next);
+        const radius = baseCellSize * .22;
+        const entry = { x: current.x - incoming.x * radius, y: current.y - incoming.y * radius };
+        const exit = { x: current.x + outgoing.x * radius, y: current.y + outgoing.y * radius };
+        data += ` L ${entry.x} ${entry.y} Q ${current.x} ${current.y} ${exit.x} ${exit.y}`;
+      } else {
+        data += ` L ${current.x} ${current.y}`;
+      }
+    }
+    return data;
+  }
+
   function drawPath(path, animate) {
     els.overlay.setAttribute("width", cols * baseCellSize);
     els.overlay.setAttribute("height", rows * baseCellSize);
     els.overlay.setAttribute("viewBox", `0 0 ${cols * baseCellSize} ${rows * baseCellSize}`);
-    const points = path.map(([r, c]) => `${c * baseCellSize + baseCellSize / 2},${r * baseCellSize + baseCellSize / 2}`).join(" ");
+    const pathData = roundedPathData(path);
     [els.halo, els.line].forEach((line) => {
       line.classList.remove("animate");
-      line.setAttribute("points", points);
+      line.setAttribute("d", pathData);
     });
     const length = els.line.getTotalLength();
-    const duration = `${Math.min(4, Math.max(.9, path.length * .052))}s`;
+    const duration = `${Math.min(12, Math.max(3, path.length * .16))}s`;
     [els.halo, els.line].forEach((line) => {
       line.style.setProperty("--path-length", length);
       line.style.setProperty("--path-duration", duration);
@@ -389,7 +456,7 @@
     paintCell(Number(cell.dataset.row), Number(cell.dataset.col));
   });
   els.viewport.addEventListener("pointerdown", (event) => {
-    if (selectedTool === "pan" || spaceHeld || event.button === 1) startPan(event);
+    if (selectedTool === "pan" || spaceHeld || event.button === 1 || event.button === 2) startPan(event);
   });
   els.viewport.addEventListener("pointermove", (event) => {
     if (!isPanning || !panOrigin) return;
@@ -399,8 +466,19 @@
   });
   els.viewport.addEventListener("wheel", (event) => {
     event.preventDefault();
-    setZoom(zoom * Math.exp(-event.deltaY * .0015), event);
+    const mouseWheel = Math.abs(event.deltaY) >= 40 && Math.abs(event.deltaX) < 1;
+    if (event.ctrlKey || event.metaKey || mouseWheel) {
+      setZoom(zoom * Math.exp(-event.deltaY * (event.ctrlKey || event.metaKey ? .006 : .0025)), event);
+    } else {
+      panX -= event.deltaX;
+      panY -= event.deltaY;
+      updateTransform();
+    }
   }, { passive: false });
+  els.viewport.addEventListener("contextmenu", (event) => event.preventDefault());
+  els.viewport.addEventListener("dblclick", (event) => {
+    if (selectedTool === "pan") centerGrid();
+  });
   window.addEventListener("pointerup", () => {
     isPainting = false;
     isPanning = false;
@@ -464,6 +542,7 @@
 
   renderGrid();
   setTool("pan");
+  updateStaticTools();
   updateLetterTools();
   requestAnimationFrame(centerGrid);
   registerWebMCP();

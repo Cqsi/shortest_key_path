@@ -5,12 +5,12 @@ An interactive visualizer inspired by LeetCode 864, “Shortest Path to Get All 
 ## Features
 
 - Editable grids from 3×3 to 30×30
-- Wall painting, one start tile, and A–Z key/lock pairs
+- Bold wall and person pictograms, one start tile, and color-matched A–Z key/lock pairs
 - Up to 26 distinct keys and locks using a BigInt bitmask
-- Infinite-canvas-style panning with a move tool, space-drag, or middle-drag
-- Cursor-centered trackpad and mouse-wheel zoom with no persistent zoom controls
-- Colored key and lock pictograms for all 26 letter pairs
-- A thicker animated optimal route with no per-cell markers or result dashboard
+- Infinite-canvas-style panning with a move tool, two-finger trackpad scrolling, space-drag, middle-drag, or right-drag
+- Cursor-centered trackpad pinch and mouse-wheel zoom with no persistent zoom controls
+- Colored key and lock pictograms for all 26 letter pairs, without letter labels in the cells
+- A slower, thicker animated optimal route with rounded corners and visible U-turn loops
 - Chunked BFS with a one-million-state safety limit to keep the page responsive
 
 The visual language mirrors [casimir.dev](https://casimir.dev): white canvas, Lora serif type, black ink, fine gray rules, and a single blue accent for the solved route.

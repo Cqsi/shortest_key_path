@@ -18,14 +18,14 @@ button, input, select { font: inherit; }
 
 .app { position: relative; width: 100%; height: 100%; overflow: hidden; }
 .grid-viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+.grid-viewport.pan-mode, .grid-viewport.pan-mode .cell { cursor: grab; }
 .grid-viewport.is-panning, .grid-viewport.is-panning .cell { cursor: grabbing; user-select: none; }
 .grid-stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
 .grid {
   display: grid;
   grid-template-columns: repeat(var(--cols), var(--cell));
   grid-template-rows: repeat(var(--rows), var(--cell));
-  border-top: 1px solid var(--line);
-  border-left: 1px solid var(--line);
+  border: 2px solid #595959;
   background: white;
 }
 
@@ -58,18 +58,17 @@ button, input, select { font: inherit; }
   font: 500 calc(var(--cell) * .34)/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   pointer-events: none;
 }
-.tile-glyph svg { width: 58%; height: 58%; fill: none; stroke: var(--tile-color); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.tile-letter { position: absolute; right: 5px; bottom: 4px; color: var(--tile-color); font-size: 9px; font-weight: 600; text-transform: uppercase; }
-.cell.start .tile-glyph { color: var(--blue); font-size: calc(var(--cell) * .38); }
+.tile-glyph svg { width: 68%; height: 68%; fill: none; stroke: var(--tile-color); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.cell.start .tile-glyph { --tile-color: #3878b9; }
 .cell.key .tile-glyph { color: #a66700; }
 .cell.lock .tile-glyph { color: #333; font-weight: 600; }
-.cell.wall .tile-glyph { color: #444; }
+.cell.wall .tile-glyph { --tile-color: #505050; }
 
-.path-overlay { position: absolute; inset: 0; z-index: 4; overflow: visible; pointer-events: none; }
-.path-overlay polyline { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-.path-halo { stroke: rgba(255,255,255,.92); stroke-width: 9px; }
-.path-line { stroke: var(--blue); stroke-width: 5px; filter: drop-shadow(0 1px 2px rgba(0,102,204,.28)); }
-.path-overlay polyline.animate { animation: drawPath var(--path-duration, 1.8s) cubic-bezier(.12,.75,.25,1) forwards; }
+.path-overlay { position: absolute; inset: 2px; z-index: 4; overflow: visible; pointer-events: none; }
+.path-overlay path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.path-halo { stroke: rgba(255,255,255,.94); stroke-width: 11px; }
+.path-line { stroke: var(--blue); stroke-width: 6px; filter: drop-shadow(0 1px 2px rgba(0,102,204,.3)); }
+.path-overlay path.animate { animation: drawPath var(--path-duration, 3s) cubic-bezier(.2,.65,.25,1) forwards; }
 
 .toolbar {
   position: fixed;
@@ -110,10 +109,10 @@ button:hover, select:hover, input:hover { background: #f2f2f2; }
 button:active { transform: scale(.94); }
 button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
 .tool { font: 500 15px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+.tool svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 .tool.active { background: var(--ink); color: white; }
 .letter-tool { font-size: 16px; }
 .letter-tool > span { display: grid; width: 20px; height: 20px; place-items: center; }
-.letter-tool svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .run { background: var(--ink); color: white; }
 .run:hover { background: #222; }
 .run.running { background: var(--blue); }
