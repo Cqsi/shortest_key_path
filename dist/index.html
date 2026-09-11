@@ -3,160 +3,55 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Design key-and-lock mazes and watch breadth-first search find the shortest route to every key."
-    />
+    <meta name="description" content="An interactive shortest path visualizer for keys and locks." />
     <title>Shortest Key Path</title>
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23111827'/%3E%3Cpath d='M8 22l8-8m0 0a5 5 0 1 0 2-2l-2 2zm-5 2h9v3H7v-3h3v-3h3v-3' fill='none' stroke='%23d7ff45' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
-    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='white'/%3E%3Cpath d='M7 25l9-9m0 0a5 5 0 1 0 2-2l-2 2zm-6 2h10v-3H8v-3h3v-3' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="topbar">
-      <a class="brand" href="#" aria-label="Shortest Key Path home">
-        <span class="brand-mark" aria-hidden="true">⌁</span>
-        <span>Shortest Key Path</span>
-      </a>
-      <div class="topbar-meta">
-        <span class="method-pill"><span class="pulse-dot"></span>Breadth-first search</span>
-        <span class="capacity">A–Z · 26 pairs</span>
+    <main class="app" aria-label="Shortest key path editor">
+      <div class="toolbar" aria-label="Grid controls">
+        <div class="control-group dimensions">
+          <input id="rowInput" type="number" min="3" max="30" value="8" aria-label="Rows" />
+          <span aria-hidden="true">×</span>
+          <input id="colInput" type="number" min="3" max="30" value="12" aria-label="Columns" />
+          <button id="applySize" type="button" aria-label="Apply grid size" data-tip="Apply">↵</button>
+        </div>
+
+        <div class="control-group tools" role="radiogroup" aria-label="Tile type">
+          <button class="tool active" data-tool="wall" type="button" role="radio" aria-checked="true" aria-label="Wall" data-tip="Wall">■</button>
+          <button class="tool" data-tool="erase" type="button" role="radio" aria-checked="false" aria-label="Erase" data-tip="Erase">□</button>
+          <button class="tool" data-tool="start" type="button" role="radio" aria-checked="false" aria-label="Start" data-tip="Start">●</button>
+          <button class="tool letter-tool" data-tool="key" type="button" role="radio" aria-checked="false" aria-label="Key" data-tip="Key"><span id="keyToolGlyph">a</span></button>
+          <button class="tool letter-tool lock-tool" data-tool="lock" type="button" role="radio" aria-checked="false" aria-label="Lock" data-tip="Lock"><span id="lockToolGlyph">A</span></button>
+          <select id="letterSelect" aria-label="Key or lock letter"></select>
+        </div>
+
+        <div class="control-group actions">
+          <button id="sampleButton" type="button" aria-label="Load sample" data-tip="Sample">↺</button>
+          <button id="clearButton" type="button" aria-label="Clear grid" data-tip="Clear">×</button>
+          <button class="run" id="runButton" type="button" aria-label="Run breadth-first search" data-tip="Run"><span id="runIcon">▶</span></button>
+        </div>
       </div>
-    </header>
 
-    <main class="app-shell">
-      <aside class="panel tools-panel" aria-label="Grid tools">
-        <section class="panel-section">
-          <div class="section-kicker">01 / canvas</div>
-          <h1>Build the maze</h1>
-          <p class="section-copy">Choose a tile, then paint the grid. Drag to place walls quickly.</p>
-        </section>
-
-        <section class="panel-section dimensions">
-          <div class="section-heading">
-            <h2>Grid size</h2>
-            <button class="text-button" id="applySize" type="button">Apply</button>
-          </div>
-          <div class="dimension-row">
-            <label>Rows <input id="rowInput" type="number" min="3" max="30" value="8" /></label>
-            <span aria-hidden="true">×</span>
-            <label>Columns <input id="colInput" type="number" min="3" max="30" value="12" /></label>
-          </div>
-        </section>
-
-        <section class="panel-section">
-          <div class="section-heading">
-            <h2>Tiles</h2>
-            <span class="hint">Shortcut</span>
-          </div>
-          <div class="tool-list" role="radiogroup" aria-label="Tile type">
-            <button class="tool active" type="button" data-tool="wall" role="radio" aria-checked="true">
-              <span class="tool-icon wall-icon">▦</span><span><strong>Wall</strong><small>Block movement</small></span><kbd>W</kbd>
-            </button>
-            <button class="tool" type="button" data-tool="erase" role="radio" aria-checked="false">
-              <span class="tool-icon erase-icon">⌫</span><span><strong>Erase</strong><small>Clear a cell</small></span><kbd>E</kbd>
-            </button>
-            <button class="tool" type="button" data-tool="start" role="radio" aria-checked="false">
-              <span class="tool-icon start-icon">●</span><span><strong>Start</strong><small>One origin</small></span><kbd>S</kbd>
-            </button>
-            <button class="tool" type="button" data-tool="key" role="radio" aria-checked="false">
-              <span class="tool-icon key-icon">⚿</span><span><strong>Key</strong><small>Collect to finish</small></span><kbd>K</kbd>
-            </button>
-            <button class="tool" type="button" data-tool="lock" role="radio" aria-checked="false">
-              <span class="tool-icon lock-icon">▣</span><span><strong>Lock</strong><small>Needs its key</small></span><kbd>L</kbd>
-            </button>
-          </div>
-          <label class="letter-field" id="letterField">
-            <span>Key / lock letter</span>
-            <select id="letterSelect" aria-label="Key or lock letter"></select>
-          </label>
-        </section>
-
-        <section class="panel-section panel-actions">
-          <button class="secondary-button" id="sampleButton" type="button">Load sample</button>
-          <button class="secondary-button" id="clearButton" type="button">Clear grid</button>
-        </section>
-      </aside>
-
-      <section class="workspace" aria-label="Maze editor">
-        <div class="workspace-toolbar">
-          <div class="view-controls">
-            <button class="icon-button" id="zoomOut" type="button" aria-label="Zoom out">−</button>
-            <label class="zoom-label">
-              <span class="sr-only">Zoom level</span>
-              <input id="zoomSlider" type="range" min="55" max="170" value="100" />
-            </label>
-            <button class="icon-button" id="zoomIn" type="button" aria-label="Zoom in">+</button>
-            <output id="zoomValue">100%</output>
-            <span class="toolbar-divider"></span>
-            <button class="pan-button" id="panButton" type="button" aria-pressed="false">
-              <span aria-hidden="true">✥</span> Pan
-            </button>
-          </div>
-          <span id="gridLabel" class="grid-label">8 × 12 grid</span>
+      <div class="grid-viewport" id="gridViewport">
+        <div class="grid-stage" id="gridStage">
+          <div class="grid" id="grid" role="grid" aria-label="Editable key maze"></div>
+          <svg class="path-overlay" id="pathOverlay" aria-hidden="true">
+            <polyline id="pathLine" points=""></polyline>
+          </svg>
         </div>
+        <output class="zoom-readout" id="zoomValue" aria-live="polite">100%</output>
+      </div>
 
-        <div class="grid-viewport" id="gridViewport">
-          <div class="grid-stage" id="gridStage">
-            <div class="grid" id="grid" role="grid" aria-label="Editable key maze"></div>
-            <svg class="path-overlay" id="pathOverlay" aria-hidden="true">
-              <polyline id="pathLine" points=""></polyline>
-            </svg>
-          </div>
-          <div class="empty-prompt" id="emptyPrompt" hidden>Select a tile and click any cell to begin.</div>
-        </div>
-
-        <div class="run-dock">
-          <div class="run-copy">
-            <span id="runEyebrow">Ready to search</span>
-            <strong id="runMessage">Collect every key in the fewest moves.</strong>
-          </div>
-          <button class="run-button" id="runButton" type="button">
-            <span id="runIcon" aria-hidden="true">▶</span>
-            <span id="runButtonLabel">Run BFS</span>
-          </button>
-        </div>
-      </section>
-
-      <aside class="panel results-panel" aria-label="Algorithm results">
-        <section class="panel-section result-hero">
-          <div class="section-kicker">02 / result</div>
-          <div class="metric-label">Minimum steps</div>
-          <div class="metric" id="stepMetric">—</div>
-          <div class="result-state" id="resultState"><span></span>Waiting for a run</div>
-        </section>
-
-        <section class="panel-section stats-grid">
-          <div><span>Keys</span><strong id="keyMetric">0</strong></div>
-          <div><span>Locks</span><strong id="lockMetric">0</strong></div>
-          <div><span>States seen</span><strong id="visitedMetric">0</strong></div>
-          <div><span>Path cells</span><strong id="pathMetric">0</strong></div>
-        </section>
-
-        <section class="panel-section">
-          <div class="section-heading"><h2>Collected order</h2><span class="hint">Optimal path</span></div>
-          <div class="key-order" id="keyOrder">
-            <span class="empty-order">Run the solver to see the route.</span>
-          </div>
-        </section>
-
-        <section class="panel-section legend-section">
-          <h2>How it works</h2>
-          <ol class="algorithm-list">
-            <li><span>1</span><p>Each state stores position plus every key held.</p></li>
-            <li><span>2</span><p>BFS explores equal-length routes together.</p></li>
-            <li><span>3</span><p>The first all-keys state is guaranteed shortest.</p></li>
-          </ol>
-        </section>
-
-        <section class="panel-section complexity">
-          <span>State bound</span>
-          <code>O(rows · cols · 2ᵏ)</code>
-        </section>
-      </aside>
+      <div class="result" aria-live="polite">
+        <output id="stepMetric">—</output>
+        <div id="keyOrder" aria-label="Collected key order"></div>
+      </div>
+      <span class="sr-only" id="statusMessage">Ready</span>
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

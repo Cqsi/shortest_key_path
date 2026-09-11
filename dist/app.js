@@ -5,29 +5,20 @@
   const $$ = (selector) => [...document.querySelectorAll(selector)];
   const els = {
     grid: $("#grid"),
-    stage: $("#gridStage"),
     viewport: $("#gridViewport"),
-    pathOverlay: $("#pathOverlay"),
-    pathLine: $("#pathLine"),
+    overlay: $("#pathOverlay"),
+    line: $("#pathLine"),
     rows: $("#rowInput"),
     cols: $("#colInput"),
-    gridLabel: $("#gridLabel"),
-    zoom: $("#zoomSlider"),
-    zoomValue: $("#zoomValue"),
-    pan: $("#panButton"),
-    run: $("#runButton"),
-    runLabel: $("#runButtonLabel"),
-    runIcon: $("#runIcon"),
-    runEyebrow: $("#runEyebrow"),
-    runMessage: $("#runMessage"),
-    stepMetric: $("#stepMetric"),
-    resultState: $("#resultState"),
-    keyMetric: $("#keyMetric"),
-    lockMetric: $("#lockMetric"),
-    visitedMetric: $("#visitedMetric"),
-    pathMetric: $("#pathMetric"),
-    keyOrder: $("#keyOrder"),
     letter: $("#letterSelect"),
+    keyTool: $("#keyToolGlyph"),
+    lockTool: $("#lockToolGlyph"),
+    run: $("#runButton"),
+    runIcon: $("#runIcon"),
+    steps: $("#stepMetric"),
+    keyOrder: $("#keyOrder"),
+    status: $("#statusMessage"),
+    zoom: $("#zoomValue"),
     toast: $("#toast"),
   };
 
@@ -41,17 +32,21 @@
     ".#####.###..",
     "............",
   ];
+  const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
 
-  let rows = 8;
-  let cols = 12;
-  let cells = [];
+  let rows = sample.length;
+  let cols = sample[0].length;
+  let cells = sample.map((line) => [...line]);
   let selectedTool = "wall";
   let isPainting = false;
-  let panMode = false;
   let isPanning = false;
+  let spaceHeld = false;
   let panOrigin = null;
   let solveToken = 0;
+  let cellSize = 44;
+  let lastPath = null;
   let toastTimer;
+  let zoomTimer;
 
   for (let code = 65; code <= 90; code += 1) {
     const option = document.createElement("option");
@@ -64,70 +59,68 @@
     return Array.from({ length: nextRows }, () => Array(nextCols).fill("."));
   }
 
-  function matrixFromStrings(lines) {
-    return lines.map((line) => [...line]);
-  }
-
   function showToast(message) {
-    window.clearTimeout(toastTimer);
+    clearTimeout(toastTimer);
     els.toast.textContent = message;
     els.toast.classList.add("show");
-    toastTimer = window.setTimeout(() => els.toast.classList.remove("show"), 2500);
-  }
-
-  function glyphFor(value) {
-    if (value === "@") return "";
-    if (value >= "a" && value <= "z") return `⚿`;
-    if (value >= "A" && value <= "Z") return value;
-    return "";
+    toastTimer = setTimeout(() => els.toast.classList.remove("show"), 2200);
   }
 
   function classFor(value) {
     if (value === "#") return "wall";
     if (value === "@") return "start";
-    if (value >= "a" && value <= "z") return "key";
-    if (value >= "A" && value <= "Z") return "lock";
+    if (/[a-z]/.test(value)) return "key";
+    if (/[A-Z]/.test(value)) return "lock";
     return "floor";
   }
 
   function labelFor(value, r, c) {
-    const at = `row ${r + 1}, column ${c + 1}`;
-    if (value === "#") return `Wall at ${at}`;
-    if (value === "@") return `Start at ${at}`;
-    if (value >= "a" && value <= "z") return `Key ${value.toUpperCase()} at ${at}`;
-    if (value >= "A" && value <= "Z") return `Lock ${value} at ${at}`;
-    return `Empty cell at ${at}`;
+    const location = `row ${r + 1}, column ${c + 1}`;
+    if (value === "#") return `Wall at ${location}`;
+    if (value === "@") return `Start at ${location}`;
+    if (/[a-z]/.test(value)) return `Key ${value.toUpperCase()} at ${location}`;
+    if (/[A-Z]/.test(value)) return `Lock ${value} at ${location}`;
+    return `Empty cell at ${location}`;
   }
 
   function renderGrid() {
     els.grid.replaceChildren();
     els.grid.style.setProperty("--rows", rows);
     els.grid.style.setProperty("--cols", cols);
-    els.gridLabel.textContent = `${rows} × ${cols} grid`;
     const fragment = document.createDocumentFragment();
     cells.forEach((line, r) => line.forEach((value, c) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `cell ${classFor(value)}`;
-      button.dataset.row = r;
-      button.dataset.col = c;
-      button.setAttribute("role", "gridcell");
-      button.setAttribute("aria-label", labelFor(value, r, c));
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = `cell ${classFor(value)}`;
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.setAttribute("role", "gridcell");
+      cell.setAttribute("aria-label", labelFor(value, r, c));
       const glyph = document.createElement("span");
       glyph.className = "tile-glyph";
-      glyph.textContent = glyphFor(value);
-      button.append(glyph);
-      fragment.append(button);
+      glyph.textContent = /[a-zA-Z]/.test(value) ? value : "";
+      cell.append(glyph);
+      fragment.append(cell);
     }));
     els.grid.append(fragment);
-    clearPath(false);
-    updateCounts();
+    clearPath();
   }
 
-  function updateCounts() {
-    const flat = cells.flat();
-    els.keyMetric.textContent = flat.filter((v) => v >= "a" && v <= "z").length;
-    els.lockMetric.textContent = flat.filter((v) => v >= "A" && v <= "Z").length;
+  function resetResult(status = "Ready") {
+    solveToken += 1;
+    els.run.classList.remove("running");
+    els.runIcon.textContent = "▶";
+    els.run.setAttribute("aria-label", "Run breadth-first search");
+    els.steps.textContent = "—";
+    els.keyOrder.replaceChildren();
+    els.status.textContent = status;
+  }
+
+  function clearPath() {
+    lastPath = null;
+    $$(".cell.path-cell").forEach((cell) => cell.classList.remove("path-cell"));
+    els.line.classList.remove("animate");
+    els.line.setAttribute("points", "");
   }
 
   function setTool(tool) {
@@ -137,7 +130,6 @@
       button.classList.toggle("active", active);
       button.setAttribute("aria-checked", String(active));
     });
-    $("#letterField").style.opacity = tool === "key" || tool === "lock" ? "1" : ".48";
   }
 
   function valueForTool() {
@@ -149,21 +141,21 @@
   }
 
   function paintCell(r, c) {
-    if (panMode) return;
-    const next = valueForTool();
-    if (next === "@") {
-      cells.forEach((line, row) => line.forEach((value, col) => {
-        if (value === "@") cells[row][col] = ".";
+    if (spaceHeld || isPanning) return;
+    const value = valueForTool();
+    if (value === "@") {
+      cells.forEach((line, row) => line.forEach((cell, col) => {
+        if (cell === "@") cells[row][col] = ".";
       }));
     }
-    cells[r][c] = next;
+    cells[r][c] = value;
     renderGrid();
-    resetResult("Grid updated", "Run BFS to calculate a new shortest route.");
+    resetResult("Grid updated");
   }
 
   function applyGridSize() {
-    const nextRows = Math.max(3, Math.min(30, Number(els.rows.value) || 8));
-    const nextCols = Math.max(3, Math.min(30, Number(els.cols.value) || 12));
+    const nextRows = Math.max(3, Math.min(30, Number(els.rows.value) || rows));
+    const nextCols = Math.max(3, Math.min(30, Number(els.cols.value) || cols));
     const next = blankGrid(nextRows, nextCols);
     for (let r = 0; r < Math.min(rows, nextRows); r += 1) {
       for (let c = 0; c < Math.min(cols, nextCols); c += 1) next[r][c] = cells[r][c];
@@ -174,29 +166,11 @@
     els.rows.value = rows;
     els.cols.value = cols;
     renderGrid();
-    resetResult("Grid resized", "Place tiles, then run the search.");
+    resetResult("Grid resized");
   }
 
-  function resetResult(eyebrow = "Ready to search", message = "Collect every key in the fewest moves.") {
-    solveToken += 1;
-    els.run.classList.remove("running");
-    els.runLabel.textContent = "Run BFS";
-    els.runIcon.textContent = "▶";
-    els.runEyebrow.textContent = eyebrow;
-    els.runMessage.textContent = message;
-    els.stepMetric.textContent = "—";
-    els.visitedMetric.textContent = "0";
-    els.pathMetric.textContent = "0";
-    els.resultState.className = "result-state";
-    els.resultState.innerHTML = "<span></span>Waiting for a run";
-    els.keyOrder.innerHTML = '<span class="empty-order">Run the solver to see the route.</span>';
-  }
-
-  function clearPath(reset = true) {
-    $$(".cell.path-cell").forEach((cell) => cell.classList.remove("path-cell"));
-    els.pathLine.classList.remove("animate");
-    els.pathLine.setAttribute("points", "");
-    if (reset) resetResult();
+  function keyBit(letter) {
+    return 1n << BigInt(letter.toLowerCase().charCodeAt(0) - 97);
   }
 
   function stateId(r, c, mask) {
@@ -208,24 +182,17 @@
     return [Number(r), Number(c)];
   }
 
-  function keyBit(letter) {
-    return 1n << BigInt(letter.toLowerCase().charCodeAt(0) - 97);
-  }
-
   function validateGrid() {
-    const starts = [];
+    let start = null;
+    let starts = 0;
     const keys = new Set();
-    const locks = new Set();
     cells.forEach((line, r) => line.forEach((value, c) => {
-      if (value === "@") starts.push([r, c]);
-      if (value >= "a" && value <= "z") keys.add(value);
-      if (value >= "A" && value <= "Z") locks.add(value.toLowerCase());
+      if (value === "@") { start = [r, c]; starts += 1; }
+      if (/[a-z]/.test(value)) keys.add(value);
     }));
-    if (starts.length !== 1) return { error: "Place exactly one start tile before running." };
-    if (keys.size === 0) return { error: "Add at least one key for the solver to collect." };
-    const orphanLocks = [...locks].filter((lock) => !keys.has(lock));
-    if (orphanLocks.length) showToast(`Locks without matching keys: ${orphanLocks.map((v) => v.toUpperCase()).join(", ")}`);
-    return { start: starts[0], keys };
+    if (starts !== 1) return { error: "Place one start point." };
+    if (!keys.size) return { error: "Place at least one key." };
+    return { start, keys };
   }
 
   function frame() {
@@ -235,93 +202,66 @@
   async function solve() {
     if (els.run.classList.contains("running")) {
       solveToken += 1;
-      els.run.classList.remove("running");
-      els.runLabel.textContent = "Run BFS";
-      els.runIcon.textContent = "▶";
-      els.runEyebrow.textContent = "Search stopped";
-      els.runMessage.textContent = "The current grid is ready to run again.";
+      resetResult("Stopped");
       return;
     }
-
     const validation = validateGrid();
-    if (validation.error) {
-      showToast(validation.error);
-      return;
-    }
+    if (validation.error) { showToast(validation.error); return; }
 
-    clearPath(false);
+    clearPath();
     const token = ++solveToken;
     let allKeys = 0n;
     validation.keys.forEach((key) => { allKeys |= keyBit(key); });
     const [startR, startC] = validation.start;
-    const startId = stateId(startR, startC, 0n);
-    const queue = [{ r: startR, c: startC, mask: 0n, steps: 0, id: startId }];
-    const visited = new Set([startId]);
+    const start = stateId(startR, startC, 0n);
+    const queue = [{ r: startR, c: startC, mask: 0n, steps: 0, id: start }];
+    const visited = new Set([start]);
     const previous = new Map();
     const gained = new Map();
-    const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
     let head = 0;
     let goal = null;
-    const maxStates = 1_000_000;
 
     els.run.classList.add("running");
-    els.runLabel.textContent = "Stop";
     els.runIcon.textContent = "■";
-    els.runEyebrow.textContent = "Searching states";
-    els.runMessage.textContent = "BFS is exploring every reachable key combination.";
-    els.resultState.className = "result-state";
-    els.resultState.innerHTML = "<span></span>Search in progress";
+    els.run.setAttribute("aria-label", "Stop search");
+    els.status.textContent = "Searching";
 
     while (head < queue.length && token === solveToken) {
       const current = queue[head++];
       if (current.mask === allKeys) { goal = current; break; }
-
       for (const [dr, dc] of directions) {
         const nr = current.r + dr;
         const nc = current.c + dc;
         if (nr < 0 || nr >= rows || nc < 0 || nc >= cols) continue;
         const cell = cells[nr][nc];
         if (cell === "#") continue;
-        if (cell >= "A" && cell <= "Z" && (current.mask & keyBit(cell)) === 0n) continue;
-
-        let nextMask = current.mask;
+        if (/[A-Z]/.test(cell) && (current.mask & keyBit(cell)) === 0n) continue;
+        let mask = current.mask;
         let picked = null;
-        if (cell >= "a" && cell <= "z") {
+        if (/[a-z]/.test(cell)) {
           const bit = keyBit(cell);
-          if ((nextMask & bit) === 0n) picked = cell;
-          nextMask |= bit;
+          if ((mask & bit) === 0n) picked = cell;
+          mask |= bit;
         }
-        const id = stateId(nr, nc, nextMask);
+        const id = stateId(nr, nc, mask);
         if (visited.has(id)) continue;
         visited.add(id);
         previous.set(id, current.id);
         if (picked) gained.set(id, picked);
-        queue.push({ r: nr, c: nc, mask: nextMask, steps: current.steps + 1, id });
+        queue.push({ r: nr, c: nc, mask, steps: current.steps + 1, id });
       }
-
-      if (visited.size >= maxStates) break;
-      if (head % 4000 === 0) {
-        els.visitedMetric.textContent = visited.size.toLocaleString();
-        await frame();
-      }
+      if (visited.size >= 1_000_000) break;
+      if (head % 4000 === 0) await frame();
     }
 
     if (token !== solveToken) return;
     els.run.classList.remove("running");
-    els.runLabel.textContent = "Run again";
     els.runIcon.textContent = "↻";
-    els.visitedMetric.textContent = visited.size.toLocaleString();
+    els.run.setAttribute("aria-label", "Run again");
 
     if (!goal) {
-      const limited = visited.size >= maxStates;
-      els.stepMetric.textContent = "−1";
-      els.resultState.className = "result-state failure";
-      els.resultState.innerHTML = `<span></span>${limited ? "Safety limit reached" : "No valid route"}`;
-      els.runEyebrow.textContent = limited ? "Search paused safely" : "No solution found";
-      els.runMessage.textContent = limited
-        ? "This maze exceeded 1,000,000 states. Reduce keys or grid size."
-        : "At least one key is unreachable with the available keys.";
-      els.keyOrder.innerHTML = '<span class="empty-order">No complete key order.</span>';
+      els.steps.textContent = "−1";
+      els.status.textContent = visited.size >= 1_000_000 ? "State limit reached" : "No route";
       return;
     }
 
@@ -336,12 +276,8 @@
     ids.reverse();
     order.reverse();
     const path = ids.map(parseState);
-    els.stepMetric.textContent = goal.steps.toLocaleString();
-    els.pathMetric.textContent = path.length.toLocaleString();
-    els.resultState.className = "result-state success";
-    els.resultState.innerHTML = "<span></span>Optimal route found";
-    els.runEyebrow.textContent = "Shortest route found";
-    els.runMessage.textContent = `${goal.steps} moves · ${visited.size.toLocaleString()} unique states explored`;
+    els.steps.textContent = goal.steps;
+    els.status.textContent = `${goal.steps} steps, ${visited.size} states`;
     els.keyOrder.replaceChildren();
     order.forEach((key, index) => {
       if (index) {
@@ -358,82 +294,96 @@
     animatePath(path);
   }
 
-  function cellSize() {
-    return Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--cell"));
+  function drawPath(path, animate) {
+    els.overlay.setAttribute("width", cols * cellSize);
+    els.overlay.setAttribute("height", rows * cellSize);
+    els.overlay.setAttribute("viewBox", `0 0 ${cols * cellSize} ${rows * cellSize}`);
+    els.line.setAttribute("points", path.map(([r, c]) => `${c * cellSize + cellSize / 2},${r * cellSize + cellSize / 2}`).join(" "));
+    const length = els.line.getTotalLength();
+    els.line.style.setProperty("--path-length", length);
+    els.line.style.strokeDasharray = length;
+    els.line.style.strokeDashoffset = animate ? length : 0;
+    els.line.style.setProperty("--path-duration", `${Math.min(4, Math.max(.8, path.length * .05))}s`);
+    if (animate) {
+      void els.line.getBoundingClientRect();
+      els.line.classList.add("animate");
+      path.forEach(([r, c], index) => {
+        const cell = els.grid.children[r * cols + c];
+        cell.style.setProperty("--delay", `${Math.min(3.5, index * .045)}s`);
+        cell.classList.add("path-cell");
+      });
+    }
   }
 
   function animatePath(path) {
-    const size = cellSize();
-    els.pathOverlay.setAttribute("width", cols * size);
-    els.pathOverlay.setAttribute("height", rows * size);
-    els.pathOverlay.setAttribute("viewBox", `0 0 ${cols * size} ${rows * size}`);
-    els.pathLine.setAttribute("points", path.map(([r, c]) => `${c * size + size / 2},${r * size + size / 2}`).join(" "));
-    const length = els.pathLine.getTotalLength();
-    els.pathLine.style.setProperty("--path-length", length);
-    els.pathLine.style.strokeDasharray = length;
-    els.pathLine.style.strokeDashoffset = length;
-    els.pathLine.style.setProperty("--path-duration", `${Math.min(4.2, Math.max(1, path.length * .055))}s`);
-    void els.pathLine.getBoundingClientRect();
-    els.pathLine.classList.add("animate");
-    path.forEach(([r, c], index) => {
-      const cell = els.grid.children[r * cols + c];
-      cell.style.setProperty("--delay", `${Math.min(3.7, index * .05)}s`);
-      cell.classList.add("path-cell");
-    });
+    lastPath = path;
+    drawPath(path, true);
   }
 
-  function setZoom(value) {
-    const zoom = Math.max(55, Math.min(170, Number(value)));
-    els.zoom.value = zoom;
-    els.zoomValue.textContent = `${zoom}%`;
-    document.documentElement.style.setProperty("--cell", `${46 * zoom / 100}px`);
-    if (els.pathLine.getAttribute("points")) clearPath(false);
+  function setZoom(next, event) {
+    const oldSize = cellSize;
+    cellSize = Math.max(24, Math.min(84, next));
+    if (oldSize === cellSize) return;
+    const rect = els.viewport.getBoundingClientRect();
+    const localX = event ? event.clientX - rect.left : els.viewport.clientWidth / 2;
+    const localY = event ? event.clientY - rect.top : els.viewport.clientHeight / 2;
+    const x = localX + els.viewport.scrollLeft;
+    const y = localY + els.viewport.scrollTop;
+    const ratio = cellSize / oldSize;
+    document.documentElement.style.setProperty("--cell", `${cellSize}px`);
+    els.viewport.scrollLeft = x * ratio - localX;
+    els.viewport.scrollTop = y * ratio - localY;
+    els.zoom.textContent = `${Math.round(cellSize / 44 * 100)}%`;
+    els.zoom.classList.add("visible");
+    clearTimeout(zoomTimer);
+    zoomTimer = setTimeout(() => els.zoom.classList.remove("visible"), 700);
+    if (lastPath) drawPath(lastPath, false);
   }
 
   $$(".tool").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
   $("#applySize").addEventListener("click", applyGridSize);
+  els.letter.addEventListener("change", () => {
+    els.keyTool.textContent = els.letter.value;
+    els.lockTool.textContent = els.letter.value.toUpperCase();
+  });
   $("#sampleButton").addEventListener("click", () => {
     rows = sample.length;
     cols = sample[0].length;
-    cells = matrixFromStrings(sample);
+    cells = sample.map((line) => [...line]);
     els.rows.value = rows;
     els.cols.value = cols;
     renderGrid();
-    resetResult("Sample loaded", "Edit the maze or run it as-is.");
+    resetResult("Sample loaded");
   });
   $("#clearButton").addEventListener("click", () => {
     cells = blankGrid(rows, cols);
     renderGrid();
-    resetResult("Grid cleared", "Place a start and at least one key.");
+    resetResult("Grid cleared");
   });
   els.run.addEventListener("click", solve);
-  els.zoom.addEventListener("input", (event) => setZoom(event.target.value));
-  $("#zoomIn").addEventListener("click", () => setZoom(Number(els.zoom.value) + 10));
-  $("#zoomOut").addEventListener("click", () => setZoom(Number(els.zoom.value) - 10));
-  els.pan.addEventListener("click", () => {
-    panMode = !panMode;
-    els.pan.setAttribute("aria-pressed", String(panMode));
-    els.viewport.classList.toggle("is-panning", panMode);
-  });
 
   els.grid.addEventListener("pointerdown", (event) => {
     const cell = event.target.closest(".cell");
-    if (!cell || panMode) return;
+    if (!cell || spaceHeld || event.button !== 0) return;
     isPainting = true;
     paintCell(Number(cell.dataset.row), Number(cell.dataset.col));
   });
   els.grid.addEventListener("pointerover", (event) => {
     const cell = event.target.closest(".cell");
-    if (!cell || !isPainting || panMode || selectedTool === "start" || selectedTool === "key" || selectedTool === "lock") return;
+    if (!cell || !isPainting || spaceHeld || !["wall", "erase"].includes(selectedTool)) return;
     paintCell(Number(cell.dataset.row), Number(cell.dataset.col));
   });
-  window.addEventListener("pointerup", () => { isPainting = false; isPanning = false; els.viewport.classList.remove("is-dragging"); });
-
+  els.viewport.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    const strength = event.ctrlKey ? 0.18 : 0.06;
+    setZoom(cellSize - event.deltaY * strength, event);
+  }, { passive: false });
   els.viewport.addEventListener("pointerdown", (event) => {
-    if (!panMode) return;
+    if (!(spaceHeld || event.button === 1)) return;
+    event.preventDefault();
     isPanning = true;
     panOrigin = { x: event.clientX, y: event.clientY, left: els.viewport.scrollLeft, top: els.viewport.scrollTop };
-    els.viewport.classList.add("is-dragging");
+    els.viewport.classList.add("is-panning");
     els.viewport.setPointerCapture(event.pointerId);
   });
   els.viewport.addEventListener("pointermove", (event) => {
@@ -441,16 +391,28 @@
     els.viewport.scrollLeft = panOrigin.left - (event.clientX - panOrigin.x);
     els.viewport.scrollTop = panOrigin.top - (event.clientY - panOrigin.y);
   });
-  els.viewport.addEventListener("wheel", (event) => {
-    if (!event.ctrlKey && !event.metaKey) return;
-    event.preventDefault();
-    setZoom(Number(els.zoom.value) + (event.deltaY < 0 ? 5 : -5));
-  }, { passive: false });
-
+  window.addEventListener("pointerup", () => {
+    isPainting = false;
+    isPanning = false;
+    els.viewport.classList.remove("is-panning");
+  });
   window.addEventListener("keydown", (event) => {
     if (["INPUT", "SELECT"].includes(document.activeElement.tagName)) return;
-    const shortcuts = { w: "wall", e: "erase", s: "start", k: "key", l: "lock" };
-    if (shortcuts[event.key.toLowerCase()]) setTool(shortcuts[event.key.toLowerCase()]);
+    if (event.code === "Space") {
+      event.preventDefault();
+      spaceHeld = true;
+      els.viewport.classList.add("space-held");
+      return;
+    }
+    const tools = { w: "wall", e: "erase", s: "start", k: "key", l: "lock" };
+    if (tools[event.key.toLowerCase()]) setTool(tools[event.key.toLowerCase()]);
+  });
+  window.addEventListener("keyup", (event) => {
+    if (event.code === "Space") {
+      spaceHeld = false;
+      isPanning = false;
+      els.viewport.classList.remove("space-held", "is-panning");
+    }
   });
 
   function registerWebMCP() {
@@ -460,7 +422,7 @@
       {
         name: "configure_key_maze",
         title: "Configure key maze",
-        description: "Replace the visible maze with rows of equal-length characters using . # @ a-z and A-Z.",
+        description: "Replace the visible maze with equal-length rows using . # @ a-z and A-Z.",
         inputSchema: { type: "object", properties: { grid: { type: "array", minItems: 3, maxItems: 30, items: { type: "string", minLength: 3, maxLength: 30 } } }, required: ["grid"], additionalProperties: false },
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         execute(input) {
@@ -468,8 +430,14 @@
           const width = input.grid[0]?.length;
           if (width < 3 || width > 30 || input.grid.some((line) => line.length !== width || /[^.#@a-zA-Z]/.test(line))) throw new Error("Rows must be 3–30 equal-length valid grid strings.");
           if (input.grid.join("").split("@").length - 1 !== 1) throw new Error("Grid must contain exactly one @ start.");
-          rows = input.grid.length; cols = width; cells = matrixFromStrings(input.grid); els.rows.value = rows; els.cols.value = cols; renderGrid(); resetResult("Maze configured", "The new grid is ready to solve.");
-          return { rows, columns: cols, keys: Number(els.keyMetric.textContent), locks: Number(els.lockMetric.textContent) };
+          rows = input.grid.length;
+          cols = width;
+          cells = input.grid.map((line) => [...line]);
+          els.rows.value = rows;
+          els.cols.value = cols;
+          renderGrid();
+          resetResult("Maze configured");
+          return { rows, columns: cols };
         },
       },
       {
@@ -478,13 +446,15 @@
         description: "Run BFS on the visible maze and animate its optimal all-keys route.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
         annotations: { readOnlyHint: false, untrustedContentHint: false },
-        async execute() { await solve(); return { minimumSteps: els.stepMetric.textContent, statesSeen: els.visitedMetric.textContent, status: els.resultState.textContent.trim() }; },
+        async execute() {
+          await solve();
+          return { minimumSteps: els.steps.textContent, status: els.status.textContent };
+        },
       },
     ];
     tools.forEach((tool) => { try { void Promise.resolve(context.registerTool(tool)).catch(() => {}); } catch (_) {} });
   }
 
-  cells = matrixFromStrings(sample);
   renderGrid();
   setTool("wall");
   registerWebMCP();
