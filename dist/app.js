@@ -5,8 +5,10 @@
   const $$ = (selector) => [...document.querySelectorAll(selector)];
   const els = {
     grid: $("#grid"),
+    stage: $("#gridStage"),
     viewport: $("#gridViewport"),
     overlay: $("#pathOverlay"),
+    halo: $("#pathHalo"),
     line: $("#pathLine"),
     rows: $("#rowInput"),
     cols: $("#colInput"),
@@ -15,10 +17,7 @@
     lockTool: $("#lockToolGlyph"),
     run: $("#runButton"),
     runIcon: $("#runIcon"),
-    steps: $("#stepMetric"),
-    keyOrder: $("#keyOrder"),
     status: $("#statusMessage"),
-    zoom: $("#zoomValue"),
     toast: $("#toast"),
   };
 
@@ -33,26 +32,58 @@
     "............",
   ];
   const directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+  const baseCellSize = 44;
 
   let rows = sample.length;
   let cols = sample[0].length;
   let cells = sample.map((line) => [...line]);
-  let selectedTool = "wall";
+  let selectedTool = "pan";
   let isPainting = false;
   let isPanning = false;
   let spaceHeld = false;
   let panOrigin = null;
   let solveToken = 0;
-  let cellSize = 44;
+  let zoom = 1;
+  let panX = 0;
+  let panY = 0;
   let lastPath = null;
+  let lastResult = null;
   let toastTimer;
-  let zoomTimer;
+
+  const keyIcon = () => `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="7.5" cy="15.5" r="4.5"></circle>
+      <path d="M10.7 12.3 21 2"></path>
+      <path d="m15.5 7.5 2.8 2.8"></path>
+      <path d="m18.2 4.8 2.8 2.8"></path>
+    </svg>`;
+  const lockIcon = () => `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4" y="10" width="16" height="11" rx="2.4"></rect>
+      <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+      <circle cx="12" cy="15.5" r="1.1"></circle>
+      <path d="M12 16.6V19"></path>
+    </svg>`;
 
   for (let code = 65; code <= 90; code += 1) {
     const option = document.createElement("option");
     option.value = String.fromCharCode(code).toLowerCase();
     option.textContent = String.fromCharCode(code);
     els.letter.append(option);
+  }
+
+  function colorForLetter(letter) {
+    const index = letter.toLowerCase().charCodeAt(0) - 97;
+    const hue = (24 + index * 47) % 360;
+    return `hsl(${hue} 70% 48%)`;
+  }
+
+  function updateLetterTools() {
+    const color = colorForLetter(els.letter.value);
+    els.keyTool.innerHTML = keyIcon();
+    els.lockTool.innerHTML = lockIcon();
+    els.keyTool.style.color = color;
+    els.lockTool.style.color = color;
   }
 
   function blankGrid(nextRows, nextCols) {
@@ -83,6 +114,13 @@
     return `Empty cell at ${location}`;
   }
 
+  function tileMarkup(value) {
+    if (value === "#" || value === "@") return value;
+    if (!/[a-zA-Z]/.test(value)) return "";
+    const icon = /[a-z]/.test(value) ? keyIcon() : lockIcon();
+    return `${icon}<span class="tile-letter">${value}</span>`;
+  }
+
   function renderGrid() {
     els.grid.replaceChildren();
     els.grid.style.setProperty("--rows", rows);
@@ -98,7 +136,8 @@
       cell.setAttribute("aria-label", labelFor(value, r, c));
       const glyph = document.createElement("span");
       glyph.className = "tile-glyph";
-      glyph.textContent = /[a-zA-Z]/.test(value) ? value : "";
+      glyph.innerHTML = tileMarkup(value);
+      if (/[a-zA-Z]/.test(value)) glyph.style.setProperty("--tile-color", colorForLetter(value));
       cell.append(glyph);
       fragment.append(cell);
     }));
@@ -106,21 +145,31 @@
     clearPath();
   }
 
+  function updateTransform() {
+    els.stage.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  }
+
+  function centerGrid() {
+    panX = (els.viewport.clientWidth - cols * baseCellSize * zoom) / 2;
+    panY = (els.viewport.clientHeight - rows * baseCellSize * zoom) / 2;
+    updateTransform();
+  }
+
   function resetResult(status = "Ready") {
     solveToken += 1;
+    lastResult = null;
     els.run.classList.remove("running");
     els.runIcon.textContent = "▶";
     els.run.setAttribute("aria-label", "Run breadth-first search");
-    els.steps.textContent = "—";
-    els.keyOrder.replaceChildren();
     els.status.textContent = status;
   }
 
   function clearPath() {
     lastPath = null;
-    $$(".cell.path-cell").forEach((cell) => cell.classList.remove("path-cell"));
-    els.line.classList.remove("animate");
-    els.line.setAttribute("points", "");
+    [els.halo, els.line].forEach((line) => {
+      line.classList.remove("animate");
+      line.setAttribute("points", "");
+    });
   }
 
   function setTool(tool) {
@@ -141,7 +190,7 @@
   }
 
   function paintCell(r, c) {
-    if (spaceHeld || isPanning) return;
+    if (selectedTool === "pan" || spaceHeld || isPanning) return;
     const value = valueForTool();
     if (value === "@") {
       cells.forEach((line, row) => line.forEach((cell, col) => {
@@ -167,6 +216,7 @@
     els.cols.value = cols;
     renderGrid();
     resetResult("Grid resized");
+    centerGrid();
   }
 
   function keyBit(letter) {
@@ -217,7 +267,6 @@
     const queue = [{ r: startR, c: startC, mask: 0n, steps: 0, id: start }];
     const visited = new Set([start]);
     const previous = new Map();
-    const gained = new Map();
     let head = 0;
     let goal = null;
 
@@ -237,17 +286,11 @@
         if (cell === "#") continue;
         if (/[A-Z]/.test(cell) && (current.mask & keyBit(cell)) === 0n) continue;
         let mask = current.mask;
-        let picked = null;
-        if (/[a-z]/.test(cell)) {
-          const bit = keyBit(cell);
-          if ((mask & bit) === 0n) picked = cell;
-          mask |= bit;
-        }
+        if (/[a-z]/.test(cell)) mask |= keyBit(cell);
         const id = stateId(nr, nc, mask);
         if (visited.has(id)) continue;
         visited.add(id);
         previous.set(id, current.id);
-        if (picked) gained.set(id, picked);
         queue.push({ r: nr, c: nc, mask, steps: current.steps + 1, id });
       }
       if (visited.size >= 1_000_000) break;
@@ -260,58 +303,44 @@
     els.run.setAttribute("aria-label", "Run again");
 
     if (!goal) {
-      els.steps.textContent = "−1";
+      lastResult = { minimumSteps: -1, statesSeen: visited.size };
       els.status.textContent = visited.size >= 1_000_000 ? "State limit reached" : "No route";
       return;
     }
 
     const ids = [];
-    const order = [];
     let cursor = goal.id;
     while (cursor) {
       ids.push(cursor);
-      if (gained.has(cursor)) order.push(gained.get(cursor));
       cursor = previous.get(cursor);
     }
     ids.reverse();
-    order.reverse();
-    const path = ids.map(parseState);
-    els.steps.textContent = goal.steps;
+    lastResult = { minimumSteps: goal.steps, statesSeen: visited.size };
     els.status.textContent = `${goal.steps} steps, ${visited.size} states`;
-    els.keyOrder.replaceChildren();
-    order.forEach((key, index) => {
-      if (index) {
-        const arrow = document.createElement("span");
-        arrow.className = "order-arrow";
-        arrow.textContent = "→";
-        els.keyOrder.append(arrow);
-      }
-      const chip = document.createElement("span");
-      chip.className = "key-chip";
-      chip.textContent = key;
-      els.keyOrder.append(chip);
-    });
-    animatePath(path);
+    animatePath(ids.map(parseState));
   }
 
   function drawPath(path, animate) {
-    els.overlay.setAttribute("width", cols * cellSize);
-    els.overlay.setAttribute("height", rows * cellSize);
-    els.overlay.setAttribute("viewBox", `0 0 ${cols * cellSize} ${rows * cellSize}`);
-    els.line.setAttribute("points", path.map(([r, c]) => `${c * cellSize + cellSize / 2},${r * cellSize + cellSize / 2}`).join(" "));
+    els.overlay.setAttribute("width", cols * baseCellSize);
+    els.overlay.setAttribute("height", rows * baseCellSize);
+    els.overlay.setAttribute("viewBox", `0 0 ${cols * baseCellSize} ${rows * baseCellSize}`);
+    const points = path.map(([r, c]) => `${c * baseCellSize + baseCellSize / 2},${r * baseCellSize + baseCellSize / 2}`).join(" ");
+    [els.halo, els.line].forEach((line) => {
+      line.classList.remove("animate");
+      line.setAttribute("points", points);
+    });
     const length = els.line.getTotalLength();
-    els.line.style.setProperty("--path-length", length);
-    els.line.style.strokeDasharray = length;
-    els.line.style.strokeDashoffset = animate ? length : 0;
-    els.line.style.setProperty("--path-duration", `${Math.min(4, Math.max(.8, path.length * .05))}s`);
+    const duration = `${Math.min(4, Math.max(.9, path.length * .052))}s`;
+    [els.halo, els.line].forEach((line) => {
+      line.style.setProperty("--path-length", length);
+      line.style.setProperty("--path-duration", duration);
+      line.style.strokeDasharray = length;
+      line.style.strokeDashoffset = animate ? length : 0;
+    });
     if (animate) {
       void els.line.getBoundingClientRect();
+      els.halo.classList.add("animate");
       els.line.classList.add("animate");
-      path.forEach(([r, c], index) => {
-        const cell = els.grid.children[r * cols + c];
-        cell.style.setProperty("--delay", `${Math.min(3.5, index * .045)}s`);
-        cell.classList.add("path-cell");
-      });
     }
   }
 
@@ -320,80 +349,62 @@
     drawPath(path, true);
   }
 
-  function setZoom(next, event) {
-    const oldSize = cellSize;
-    cellSize = Math.max(24, Math.min(84, next));
-    if (oldSize === cellSize) return;
+  function setZoom(nextZoom, event) {
+    const oldZoom = zoom;
+    zoom = Math.max(.2, Math.min(4, nextZoom));
+    if (oldZoom === zoom) return;
     const rect = els.viewport.getBoundingClientRect();
-    const localX = event ? event.clientX - rect.left : els.viewport.clientWidth / 2;
-    const localY = event ? event.clientY - rect.top : els.viewport.clientHeight / 2;
-    const x = localX + els.viewport.scrollLeft;
-    const y = localY + els.viewport.scrollTop;
-    const ratio = cellSize / oldSize;
-    document.documentElement.style.setProperty("--cell", `${cellSize}px`);
-    els.viewport.scrollLeft = x * ratio - localX;
-    els.viewport.scrollTop = y * ratio - localY;
-    els.zoom.textContent = `${Math.round(cellSize / 44 * 100)}%`;
-    els.zoom.classList.add("visible");
-    clearTimeout(zoomTimer);
-    zoomTimer = setTimeout(() => els.zoom.classList.remove("visible"), 700);
+    const pointerX = event ? event.clientX - rect.left : rect.width / 2;
+    const pointerY = event ? event.clientY - rect.top : rect.height / 2;
+    const worldX = (pointerX - panX) / oldZoom;
+    const worldY = (pointerY - panY) / oldZoom;
+    panX = pointerX - worldX * zoom;
+    panY = pointerY - worldY * zoom;
+    updateTransform();
     if (lastPath) drawPath(lastPath, false);
+  }
+
+  function startPan(event) {
+    event.preventDefault();
+    isPanning = true;
+    panOrigin = { x: event.clientX, y: event.clientY, panX, panY };
+    els.viewport.classList.add("is-panning");
+    els.viewport.setPointerCapture(event.pointerId);
   }
 
   $$(".tool").forEach((button) => button.addEventListener("click", () => setTool(button.dataset.tool)));
   $("#applySize").addEventListener("click", applyGridSize);
-  els.letter.addEventListener("change", () => {
-    els.keyTool.textContent = els.letter.value;
-    els.lockTool.textContent = els.letter.value.toUpperCase();
-  });
-  $("#sampleButton").addEventListener("click", () => {
-    rows = sample.length;
-    cols = sample[0].length;
-    cells = sample.map((line) => [...line]);
-    els.rows.value = rows;
-    els.cols.value = cols;
-    renderGrid();
-    resetResult("Sample loaded");
-  });
-  $("#clearButton").addEventListener("click", () => {
-    cells = blankGrid(rows, cols);
-    renderGrid();
-    resetResult("Grid cleared");
-  });
+  els.letter.addEventListener("change", updateLetterTools);
   els.run.addEventListener("click", solve);
 
   els.grid.addEventListener("pointerdown", (event) => {
     const cell = event.target.closest(".cell");
-    if (!cell || spaceHeld || event.button !== 0) return;
+    if (!cell || selectedTool === "pan" || spaceHeld || event.button !== 0) return;
     isPainting = true;
     paintCell(Number(cell.dataset.row), Number(cell.dataset.col));
   });
   els.grid.addEventListener("pointerover", (event) => {
     const cell = event.target.closest(".cell");
-    if (!cell || !isPainting || spaceHeld || !["wall", "erase"].includes(selectedTool)) return;
+    if (!cell || !isPainting || !["wall", "erase"].includes(selectedTool)) return;
     paintCell(Number(cell.dataset.row), Number(cell.dataset.col));
   });
-  els.viewport.addEventListener("wheel", (event) => {
-    event.preventDefault();
-    const strength = event.ctrlKey ? 0.18 : 0.06;
-    setZoom(cellSize - event.deltaY * strength, event);
-  }, { passive: false });
   els.viewport.addEventListener("pointerdown", (event) => {
-    if (!(spaceHeld || event.button === 1)) return;
-    event.preventDefault();
-    isPanning = true;
-    panOrigin = { x: event.clientX, y: event.clientY, left: els.viewport.scrollLeft, top: els.viewport.scrollTop };
-    els.viewport.classList.add("is-panning");
-    els.viewport.setPointerCapture(event.pointerId);
+    if (selectedTool === "pan" || spaceHeld || event.button === 1) startPan(event);
   });
   els.viewport.addEventListener("pointermove", (event) => {
     if (!isPanning || !panOrigin) return;
-    els.viewport.scrollLeft = panOrigin.left - (event.clientX - panOrigin.x);
-    els.viewport.scrollTop = panOrigin.top - (event.clientY - panOrigin.y);
+    panX = panOrigin.panX + event.clientX - panOrigin.x;
+    panY = panOrigin.panY + event.clientY - panOrigin.y;
+    updateTransform();
   });
+  els.viewport.addEventListener("wheel", (event) => {
+    event.preventDefault();
+    setZoom(zoom * Math.exp(-event.deltaY * .0015), event);
+  }, { passive: false });
   window.addEventListener("pointerup", () => {
     isPainting = false;
     isPanning = false;
+    panOrigin = null;
     els.viewport.classList.remove("is-panning");
   });
   window.addEventListener("keydown", (event) => {
@@ -401,18 +412,13 @@
     if (event.code === "Space") {
       event.preventDefault();
       spaceHeld = true;
-      els.viewport.classList.add("space-held");
       return;
     }
-    const tools = { w: "wall", e: "erase", s: "start", k: "key", l: "lock" };
+    const tools = { p: "pan", w: "wall", e: "erase", s: "start", k: "key", l: "lock" };
     if (tools[event.key.toLowerCase()]) setTool(tools[event.key.toLowerCase()]);
   });
   window.addEventListener("keyup", (event) => {
-    if (event.code === "Space") {
-      spaceHeld = false;
-      isPanning = false;
-      els.viewport.classList.remove("space-held", "is-panning");
-    }
+    if (event.code === "Space") spaceHeld = false;
   });
 
   function registerWebMCP() {
@@ -437,6 +443,7 @@
           els.cols.value = cols;
           renderGrid();
           resetResult("Maze configured");
+          centerGrid();
           return { rows, columns: cols };
         },
       },
@@ -448,7 +455,7 @@
         annotations: { readOnlyHint: false, untrustedContentHint: false },
         async execute() {
           await solve();
-          return { minimumSteps: els.steps.textContent, status: els.status.textContent };
+          return { ...lastResult, status: els.status.textContent };
         },
       },
     ];
@@ -456,6 +463,8 @@
   }
 
   renderGrid();
-  setTool("wall");
+  setTool("pan");
+  updateLetterTools();
+  requestAnimationFrame(centerGrid);
   registerWebMCP();
 })();

@@ -13,6 +13,16 @@
   </head>
   <body>
     <main class="app" aria-label="Shortest key path editor">
+      <div class="grid-viewport" id="gridViewport">
+        <div class="grid-stage" id="gridStage">
+          <div class="grid" id="grid" role="grid" aria-label="Editable key maze"></div>
+          <svg class="path-overlay" id="pathOverlay" aria-hidden="true">
+            <polyline class="path-halo" id="pathHalo" points="" vector-effect="non-scaling-stroke"></polyline>
+            <polyline class="path-line" id="pathLine" points="" vector-effect="non-scaling-stroke"></polyline>
+          </svg>
+        </div>
+      </div>
+
       <div class="toolbar" aria-label="Grid controls">
         <div class="control-group dimensions">
           <input id="rowInput" type="number" min="3" max="30" value="8" aria-label="Rows" />
@@ -21,35 +31,23 @@
           <button id="applySize" type="button" aria-label="Apply grid size" data-tip="Apply">↵</button>
         </div>
 
+        <span class="divider" aria-hidden="true"></span>
+
         <div class="control-group tools" role="radiogroup" aria-label="Tile type">
-          <button class="tool active" data-tool="wall" type="button" role="radio" aria-checked="true" aria-label="Wall" data-tip="Wall">■</button>
-          <button class="tool" data-tool="erase" type="button" role="radio" aria-checked="false" aria-label="Erase" data-tip="Erase">□</button>
-          <button class="tool" data-tool="start" type="button" role="radio" aria-checked="false" aria-label="Start" data-tip="Start">●</button>
+          <button class="tool active" data-tool="pan" type="button" role="radio" aria-checked="true" aria-label="Move grid" data-tip="Move">✥</button>
+          <button class="tool" data-tool="wall" type="button" role="radio" aria-checked="false" aria-label="Wall" data-tip="Wall">#</button>
+          <button class="tool" data-tool="erase" type="button" role="radio" aria-checked="false" aria-label="Erase" data-tip="Erase">·</button>
+          <button class="tool" data-tool="start" type="button" role="radio" aria-checked="false" aria-label="Start" data-tip="Start">@</button>
           <button class="tool letter-tool" data-tool="key" type="button" role="radio" aria-checked="false" aria-label="Key" data-tip="Key"><span id="keyToolGlyph">a</span></button>
-          <button class="tool letter-tool lock-tool" data-tool="lock" type="button" role="radio" aria-checked="false" aria-label="Lock" data-tip="Lock"><span id="lockToolGlyph">A</span></button>
+          <button class="tool letter-tool" data-tool="lock" type="button" role="radio" aria-checked="false" aria-label="Lock" data-tip="Lock"><span id="lockToolGlyph">A</span></button>
           <select id="letterSelect" aria-label="Key or lock letter"></select>
         </div>
 
+        <span class="divider" aria-hidden="true"></span>
+
         <div class="control-group actions">
-          <button id="sampleButton" type="button" aria-label="Load sample" data-tip="Sample">↺</button>
-          <button id="clearButton" type="button" aria-label="Clear grid" data-tip="Clear">×</button>
           <button class="run" id="runButton" type="button" aria-label="Run breadth-first search" data-tip="Run"><span id="runIcon">▶</span></button>
         </div>
-      </div>
-
-      <div class="grid-viewport" id="gridViewport">
-        <div class="grid-stage" id="gridStage">
-          <div class="grid" id="grid" role="grid" aria-label="Editable key maze"></div>
-          <svg class="path-overlay" id="pathOverlay" aria-hidden="true">
-            <polyline id="pathLine" points=""></polyline>
-          </svg>
-        </div>
-        <output class="zoom-readout" id="zoomValue" aria-live="polite">100%</output>
-      </div>
-
-      <div class="result" aria-live="polite">
-        <output id="stepMetric">—</output>
-        <div id="keyOrder" aria-label="Collected key order"></div>
       </div>
       <span class="sr-only" id="statusMessage">Ready</span>
     </main>
