@@ -60,7 +60,7 @@
   let spaceHeld = false;
   let panOrigin = null;
   let solveToken = 0;
-  let zoom = 1;
+  let zoom = 1.16;
   let panX = 0;
   let panY = 0;
   let lastPath = null;
