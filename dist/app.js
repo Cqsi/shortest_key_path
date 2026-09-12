@@ -12,6 +12,7 @@
     line: $("#pathLine"),
     startDot: $("#pathStartDot"),
     endDot: $("#pathEndDot"),
+    spark: $("#pathSpark"),
     rows: $("#rowInput"),
     cols: $("#colInput"),
     settingsButton: $("#settingsButton"),
@@ -58,6 +59,7 @@
   let panY = 0;
   let lastPath = null;
   let lastResult = null;
+  let pathAnimationFrame = 0;
   let selectedKeyLetter = "a";
   let selectedLockLetter = null;
   let toastTimer;
@@ -299,12 +301,14 @@
 
   function clearPath() {
     lastPath = null;
-    els.line.onanimationend = null;
+    cancelAnimationFrame(pathAnimationFrame);
+    pathAnimationFrame = 0;
     [els.halo, els.line].forEach((line) => {
       line.classList.remove("animate");
       line.setAttribute("d", "");
     });
     [els.startDot, els.endDot].forEach((dot) => dot.classList.remove("visible"));
+    els.spark.classList.remove("visible");
   }
 
   function setTool(tool) {
@@ -521,6 +525,8 @@
   }
 
   function drawPath(path, animate) {
+    cancelAnimationFrame(pathAnimationFrame);
+    pathAnimationFrame = 0;
     els.overlay.setAttribute("width", cols * baseCellSize);
     els.overlay.setAttribute("height", rows * baseCellSize);
     els.overlay.setAttribute("viewBox", `0 0 ${cols * baseCellSize} ${rows * baseCellSize}`);
@@ -533,29 +539,43 @@
     els.endDot.setAttribute("cy", end[0] * baseCellSize + baseCellSize / 2);
     els.startDot.classList.add("visible");
     els.endDot.classList.remove("visible");
+    els.spark.classList.remove("visible");
     [els.halo, els.line].forEach((line) => {
       line.classList.remove("animate");
       line.setAttribute("d", pathData);
     });
     const length = els.line.getTotalLength();
-    const duration = `${Math.min(12, Math.max(3, path.length * .16))}s`;
+    const duration = Math.min(18000, Math.max(4500, path.length * 230));
     [els.halo, els.line].forEach((line) => {
       line.style.setProperty("--path-length", length);
-      line.style.setProperty("--path-duration", duration);
       line.style.strokeDasharray = length;
       line.style.strokeDashoffset = animate ? length : 0;
     });
-    if (animate) {
-      void els.line.getBoundingClientRect();
-      els.halo.classList.add("animate");
-      els.line.classList.add("animate");
-      els.line.onanimationend = () => {
-        els.line.onanimationend = null;
-        if (lastPath === path) els.endDot.classList.add("visible");
-      };
-    } else {
+    if (!animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      [els.halo, els.line].forEach((line) => { line.style.strokeDashoffset = 0; });
       els.endDot.classList.add("visible");
+      return;
     }
+
+    const startedAt = performance.now();
+    els.spark.classList.add("visible");
+    const advance = (now) => {
+      if (lastPath !== path) return;
+      const time = Math.min(1, (now - startedAt) / duration);
+      const progress = 1 - Math.pow(1 - time, 2.2);
+      const offset = length * (1 - progress);
+      [els.halo, els.line].forEach((line) => { line.style.strokeDashoffset = offset; });
+      const point = els.line.getPointAtLength(length * progress);
+      els.spark.setAttribute("transform", `translate(${point.x} ${point.y})`);
+      if (time < 1) {
+        pathAnimationFrame = requestAnimationFrame(advance);
+        return;
+      }
+      pathAnimationFrame = 0;
+      els.spark.classList.remove("visible");
+      els.endDot.classList.add("visible");
+    };
+    pathAnimationFrame = requestAnimationFrame(advance);
   }
 
   function animatePath(path) {
