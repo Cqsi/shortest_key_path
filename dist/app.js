@@ -10,6 +10,8 @@
     overlay: $("#pathOverlay"),
     halo: $("#pathHalo"),
     line: $("#pathLine"),
+    startDot: $("#pathStartDot"),
+    endDot: $("#pathEndDot"),
     rows: $("#rowInput"),
     cols: $("#colInput"),
     settingsButton: $("#settingsButton"),
@@ -83,6 +85,11 @@
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <rect x="2.5" y="4" width="19" height="16" rx="1"></rect>
       <path d="M2.5 9.3h19M2.5 14.7h19M8.8 4v5.3M15.2 4v5.3M6 9.3v5.4M13 9.3v5.4M18.2 9.3v5.4M8.8 14.7V20M15.2 14.7V20"></path>
+    </svg>`;
+  const resetIcon = () => `
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M20 11a8 8 0 1 0-2.35 5.66"></path>
+      <path d="M20 4v7h-7"></path>
     </svg>`;
 
   function colorForLetter(letter) {
@@ -284,6 +291,7 @@
     solveToken += 1;
     lastResult = null;
     els.run.classList.remove("running");
+    els.run.classList.remove("clearable");
     els.runIcon.textContent = "▶";
     els.run.setAttribute("aria-label", "Run breadth-first search");
     els.status.textContent = status;
@@ -291,10 +299,12 @@
 
   function clearPath() {
     lastPath = null;
+    els.line.onanimationend = null;
     [els.halo, els.line].forEach((line) => {
       line.classList.remove("animate");
       line.setAttribute("d", "");
     });
+    [els.startDot, els.endDot].forEach((dot) => dot.classList.remove("visible"));
   }
 
   function setTool(tool) {
@@ -446,8 +456,9 @@
 
     if (token !== solveToken) return;
     els.run.classList.remove("running");
-    els.runIcon.textContent = "↻";
-    els.run.setAttribute("aria-label", "Run again");
+    els.run.classList.add("clearable");
+    els.runIcon.innerHTML = resetIcon();
+    els.run.setAttribute("aria-label", "Clear path");
 
     if (!goal) {
       lastResult = { minimumSteps: -1, statesSeen: visited.size };
@@ -490,14 +501,7 @@
       const next = points[i + 1];
 
       if (next && same(previous, next)) {
-        const incoming = unit(previous, current);
-        const side = i % 2 ? 1 : -1;
-        const perpendicular = { x: -incoming.y * side, y: incoming.x * side };
-        const loopWidth = baseCellSize * .3;
-        data += ` L ${current.x} ${current.y}`;
-        data += ` C ${current.x + perpendicular.x * loopWidth} ${current.y + perpendicular.y * loopWidth}`;
-        data += ` ${next.x + perpendicular.x * loopWidth} ${next.y + perpendicular.y * loopWidth}`;
-        data += ` ${next.x} ${next.y}`;
+        data += ` L ${current.x} ${current.y} L ${next.x} ${next.y}`;
         i += 1;
         continue;
       }
@@ -521,6 +525,14 @@
     els.overlay.setAttribute("height", rows * baseCellSize);
     els.overlay.setAttribute("viewBox", `0 0 ${cols * baseCellSize} ${rows * baseCellSize}`);
     const pathData = roundedPathData(path);
+    const start = path[0];
+    const end = path[path.length - 1];
+    els.startDot.setAttribute("cx", start[1] * baseCellSize + baseCellSize / 2);
+    els.startDot.setAttribute("cy", start[0] * baseCellSize + baseCellSize / 2);
+    els.endDot.setAttribute("cx", end[1] * baseCellSize + baseCellSize / 2);
+    els.endDot.setAttribute("cy", end[0] * baseCellSize + baseCellSize / 2);
+    els.startDot.classList.add("visible");
+    els.endDot.classList.remove("visible");
     [els.halo, els.line].forEach((line) => {
       line.classList.remove("animate");
       line.setAttribute("d", pathData);
@@ -537,6 +549,12 @@
       void els.line.getBoundingClientRect();
       els.halo.classList.add("animate");
       els.line.classList.add("animate");
+      els.line.onanimationend = () => {
+        els.line.onanimationend = null;
+        if (lastPath === path) els.endDot.classList.add("visible");
+      };
+    } else {
+      els.endDot.classList.add("visible");
     }
   }
 
@@ -589,6 +607,11 @@
   });
   els.run.addEventListener("click", () => {
     closePopovers();
+    if (els.run.classList.contains("clearable")) {
+      clearPath();
+      resetResult();
+      return;
+    }
     solve();
   });
 
