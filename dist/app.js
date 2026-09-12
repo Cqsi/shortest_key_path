@@ -269,7 +269,7 @@
     if (value === "@") return "start";
     if (/[a-z]/.test(value)) return "key";
     if (/[A-Z]/.test(value)) return "lock";
-    return "floor";
+    return "";
   }
 
   function labelFor(value, r, c) {
@@ -296,7 +296,8 @@
     cells.forEach((line, r) => line.forEach((value, c) => {
       const cell = document.createElement("button");
       cell.type = "button";
-      cell.className = `cell ${classFor(value)}`;
+      const tileClass = classFor(value);
+      cell.className = tileClass ? `cell ${tileClass}` : "cell";
       cell.dataset.row = r;
       cell.dataset.col = c;
       cell.setAttribute("role", "gridcell");
@@ -326,8 +327,7 @@
   function resetResult(status = "Ready") {
     solveToken += 1;
     lastResult = null;
-    els.run.classList.remove("running");
-    els.run.classList.remove("clearable");
+    els.run.classList.remove("running", "clearable");
     els.runIcon.textContent = "▶";
     els.run.setAttribute("aria-label", "Run breadth-first search");
     els.status.textContent = status;
@@ -364,7 +364,6 @@
     cancelAnimationFrame(pathAnimationFrame);
     pathAnimationFrame = 0;
     [els.halo, els.line].forEach((line) => {
-      line.classList.remove("animate");
       line.setAttribute("d", "");
     });
     [els.startDot, els.endDot].forEach((dot) => dot.classList.remove("visible"));
@@ -542,7 +541,7 @@
     ids.reverse();
     lastResult = { minimumSteps: goal.steps, statesSeen: visited.size };
     els.status.textContent = `${goal.steps} steps, ${visited.size} states`;
-    animatePath(ids.map(parseState));
+    drawPath(ids.map(parseState));
   }
 
   function roundedPathData(path) {
@@ -587,9 +586,10 @@
     return data;
   }
 
-  function drawPath(path, animate) {
+  function drawPath(path) {
     cancelAnimationFrame(pathAnimationFrame);
     pathAnimationFrame = 0;
+    lastPath = path;
     els.overlay.setAttribute("width", cols * baseCellSize);
     els.overlay.setAttribute("height", rows * baseCellSize);
     els.overlay.setAttribute("viewBox", `0 0 ${cols * baseCellSize} ${rows * baseCellSize}`);
@@ -604,17 +604,15 @@
     els.endDot.classList.remove("visible");
     els.spark.classList.remove("visible");
     [els.halo, els.line].forEach((line) => {
-      line.classList.remove("animate");
       line.setAttribute("d", pathData);
     });
     const length = els.line.getTotalLength();
     const duration = Math.min(18000, Math.max(4500, path.length * 230));
     [els.halo, els.line].forEach((line) => {
-      line.style.setProperty("--path-length", length);
       line.style.strokeDasharray = length;
-      line.style.strokeDashoffset = animate ? length : 0;
+      line.style.strokeDashoffset = length;
     });
-    if (!animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       [els.halo, els.line].forEach((line) => { line.style.strokeDashoffset = 0; });
       els.endDot.classList.add("visible");
       if (lastResult) showResult(`Minimum ${lastResult.minimumSteps} steps`);
@@ -643,11 +641,6 @@
     pathAnimationFrame = requestAnimationFrame(advance);
   }
 
-  function animatePath(path) {
-    lastPath = path;
-    drawPath(path, true);
-  }
-
   function setZoom(nextZoom, event) {
     const oldZoom = zoom;
     zoom = Math.max(.2, Math.min(4, nextZoom));
@@ -660,7 +653,6 @@
     panX = pointerX - worldX * zoom;
     panY = pointerY - worldY * zoom;
     updateTransform();
-    if (lastPath) drawPath(lastPath, false);
   }
 
   function startPan(event) {

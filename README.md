@@ -13,8 +13,11 @@ An interactive visualizer inspired by LeetCode 864, “Shortest Path to Get All 
 - Keys are assigned in a fixed color sequence; locks can only be paired with an existing, unmatched key color
 - Infinite-canvas-style panning with a move tool, two-finger trackpad scrolling, space-drag, middle-drag, or right-drag
 - Cursor-centered trackpad pinch and mouse-wheel zoom with no persistent zoom controls
+- Tool-matched cursors for placing, locking, wall drawing, and erasing
 - Colored key and lock pictograms for all 26 letter pairs, without letter labels in the cells
-- A slower, thicker animated optimal route with rounded corners and visible U-turn loops
+- A slower, thicker animated optimal route with rounded corners, endpoint dots, and a leading spark
+- A compact result bubble for the minimum step count or an impossible maze
+- A short built-in guide for the grid controls
 - Chunked BFS with a one-million-state safety limit to keep the page responsive
 
 The visual language mirrors [casimir.dev](https://casimir.dev): white canvas, Lora serif type, black ink, fine gray rules, and a single blue accent for the solved route.
