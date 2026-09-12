@@ -316,8 +316,8 @@
     return ".";
   }
 
-  function paintCell(r, c) {
-    if (selectedTool === "pan" || spaceHeld || isPanning) return;
+  function paintCell(r, c, buttons) {
+    if (!(buttons & 1) || selectedTool === "pan" || spaceHeld || isPanning) return;
     const value = valueForTool();
     const previousValue = cells[r][c];
     if (["key", "lock"].includes(selectedTool) && /[a-zA-Z]/.test(previousValue)) {
@@ -603,7 +603,7 @@
     const cell = event.target.closest(".cell");
     if (!cell || selectedTool === "pan" || spaceHeld || event.button !== 0) return;
     isPainting = true;
-    paintCell(Number(cell.dataset.row), Number(cell.dataset.col));
+    paintCell(Number(cell.dataset.row), Number(cell.dataset.col), event.buttons);
   });
   els.grid.addEventListener("pointerover", (event) => {
     const cell = event.target.closest(".cell");
@@ -612,7 +612,7 @@
       return;
     }
     if (!cell || !isPainting || !["wall", "erase"].includes(selectedTool)) return;
-    paintCell(Number(cell.dataset.row), Number(cell.dataset.col));
+    paintCell(Number(cell.dataset.row), Number(cell.dataset.col), event.buttons);
   });
   els.viewport.addEventListener("pointerdown", (event) => {
     if (selectedTool === "pan" || spaceHeld || event.button === 1 || event.button === 2) startPan(event);

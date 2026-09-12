@@ -119,9 +119,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outl
 .add-button.active { background: var(--ink); color: white; }
 .add-button[aria-expanded="true"], #settingsButton[aria-expanded="true"] { background: var(--ink); color: white; }
 .menu-tool > span { display: grid; place-items: center; }
-.run { background: var(--ink); color: white; }
-.run:hover { background: #222; }
-.run.running { background: var(--blue); }
+.run { background: #164c2f; color: white; }
+.run:hover { background: #0f3f25; }
+.run.running { background: #1e6a3f; }
 
 .popover {
   position: absolute;
@@ -136,7 +136,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outl
   transform-origin: bottom center;
 }
 .popover:not([hidden]), .lock-picker:not([hidden]) { animation: bubbleIn 300ms cubic-bezier(.2, .9, .25, 1.25); }
-.settings-popover { right: 0; width: 184px; padding: 8px 10px; }
+.settings-popover { left: 50%; width: 184px; padding: 8px 10px; transform: translateX(-50%); }
 .settings-popover label { min-height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 20px; color: #303030; font-size: 14px; }
 .settings-popover input { width: 58px; height: 30px; padding: 0 8px; border: 1px solid #dedede; border-radius: 7px; text-align: right; font: 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; background: #fff; }
 .settings-popover input:focus { border-color: #888; }
@@ -148,26 +148,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outl
 #lockChoices { display: grid; gap: 3px; }
 .lock-choice { width: 36px; min-width: 36px; height: 36px; display: grid; place-items: center; padding: 0; }
 .lock-choice svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-
-button[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  z-index: 20;
-  left: 50%;
-  bottom: calc(100% + 9px);
-  padding: 4px 7px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: white;
-  color: #555;
-  font: 11px/1 "Lora", Georgia, serif;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transform: translate(-50%, 2px);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-button[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0); }
 
 .toast {
   position: fixed;
@@ -201,7 +181,6 @@ button[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0); }
   .divider { margin: 0 1px; }
   button { min-width: 36px; height: 36px; padding: 0 8px; }
   .lock-picker { left: auto; right: calc(100% + 9px); }
-  button[data-tip]::after { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

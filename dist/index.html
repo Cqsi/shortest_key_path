@@ -24,24 +24,24 @@
       </div>
 
       <div class="toolbar" aria-label="Grid controls">
-        <button class="tool direct-tool active" data-tool="pan" type="button" aria-pressed="true" aria-label="Move grid" data-tip="Move">
+        <button class="tool direct-tool active" data-tool="pan" type="button" aria-pressed="true" aria-label="Move grid">
           <svg class="pointer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5 18.2 12l-6.1 1.25L9 19.1 5 3.5Z"></path></svg>
         </button>
-        <button class="tool direct-tool" data-tool="erase" type="button" aria-pressed="false" aria-label="Erase" data-tip="Erase">
+        <button class="tool direct-tool" data-tool="erase" type="button" aria-pressed="false" aria-label="Erase">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4.2 14.3 8.9-8.9a2 2 0 0 1 2.8 0l2.7 2.7a2 2 0 0 1 0 2.8l-8.9 8.9H5.8l-1.6-1.6a2.8 2.8 0 0 1 0-3.9Z"></path><path d="m10.2 8.3 5.5 5.5M9.7 19.8H20"></path></svg>
         </button>
 
         <span class="divider" aria-hidden="true"></span>
 
         <div class="popover-anchor">
-          <button class="icon-button add-button" id="addButton" type="button" aria-label="Add to grid" aria-expanded="false" data-tip="Add">
+          <button class="icon-button add-button" id="addButton" type="button" aria-label="Add to grid" aria-expanded="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
           </button>
           <div class="popover add-popover" id="addPopover" role="menu" aria-label="Add to grid" hidden>
-            <button class="menu-tool tool" data-tool="wall" type="button" role="menuitem" aria-label="Wall" data-tip="Wall"><span id="wallToolGlyph"></span></button>
-            <button class="menu-tool tool" data-tool="start" type="button" role="menuitem" aria-label="Start point" data-tip="Start"><span id="startToolGlyph"></span></button>
-            <button class="menu-tool tool" id="keyMenuButton" data-tool="key" type="button" role="menuitem" aria-label="Next key" data-tip="Key"><span id="keyToolGlyph"></span></button>
-            <button class="menu-tool tool" id="lockMenuButton" data-tool="lock" type="button" role="menuitem" aria-label="Matching lock" aria-expanded="false" data-tip="Lock"><span id="lockToolGlyph"></span></button>
+            <button class="menu-tool tool" data-tool="wall" type="button" role="menuitem" aria-label="Wall"><span id="wallToolGlyph"></span></button>
+            <button class="menu-tool tool" data-tool="start" type="button" role="menuitem" aria-label="Start point"><span id="startToolGlyph"></span></button>
+            <button class="menu-tool tool" id="keyMenuButton" data-tool="key" type="button" role="menuitem" aria-label="Next key"><span id="keyToolGlyph"></span></button>
+            <button class="menu-tool tool" id="lockMenuButton" data-tool="lock" type="button" role="menuitem" aria-label="Matching lock" aria-expanded="false"><span id="lockToolGlyph"></span></button>
             <div class="lock-picker" id="lockPicker" role="menu" aria-label="Choose a matching lock" hidden>
               <div id="lockChoices"></div>
             </div>
@@ -51,7 +51,7 @@
         <span class="divider" aria-hidden="true"></span>
 
         <div class="popover-anchor">
-          <button class="icon-button" id="settingsButton" type="button" aria-label="Grid settings" aria-expanded="false" data-tip="Settings">
+          <button class="icon-button" id="settingsButton" type="button" aria-label="Grid settings" aria-expanded="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5M15 7h5M4 12h9M19 12h1M4 17h2M12 17h8"></path><circle cx="12" cy="7" r="2"></circle><circle cx="16" cy="12" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg>
           </button>
           <div class="popover settings-popover" id="settingsPopover" role="dialog" aria-label="Grid size" hidden>
@@ -60,7 +60,7 @@
           </div>
         </div>
 
-        <button class="run" id="runButton" type="button" aria-label="Run breadth-first search" data-tip="Run"><span id="runIcon">▶</span></button>
+        <button class="run" id="runButton" type="button" aria-label="Run breadth-first search"><span id="runIcon">▶</span></button>
       </div>
       <span class="sr-only" id="statusMessage">Ready</span>
     </main>
