@@ -29,7 +29,18 @@
         </div>
       </div>
 
+      <button class="help-button" id="helpButton" type="button" aria-label="How it works" aria-haspopup="dialog" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M9.7 9a2.5 2.5 0 1 1 3.4 2.35c-.72.34-1.1.86-1.1 1.65v.25"></path>
+          <circle class="help-dot" cx="12" cy="17" r=".7"></circle>
+        </svg>
+      </button>
+
       <div class="toolbar" aria-label="Grid controls">
+        <div class="result-popover" id="resultPopover" role="status" aria-live="polite" hidden>
+          <span id="resultText"></span>
+        </div>
         <div class="popover-anchor">
           <button class="icon-button" id="settingsButton" type="button" aria-label="Grid settings" aria-expanded="false">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.8 3h4.4l.5 2.1 1.8 1 2-.6 2.2 3.8-1.5 1.5v2.4l1.5 1.5-2.2 3.8-2-.6-1.8 1-.5 2.1H9.8l-.5-2.1-1.8-1-2 .6-2.2-3.8 1.5-1.5v-2.4L3.3 9.3l2.2-3.8 2 .6 1.8-1L9.8 3Z"></path><circle cx="12" cy="12" r="3.1"></circle></svg>
@@ -73,6 +84,35 @@
     </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="help-backdrop" id="helpBackdrop" hidden>
+      <section class="help-dialog" id="helpDialog" role="dialog" aria-modal="true" aria-labelledby="helpTitle" tabindex="-1">
+        <h1 id="helpTitle">Shortest key path</h1>
+        <p>Build a maze, then watch breadth-first search find the shortest route that collects every key. A lock opens only after its matching colored key is collected.</p>
+        <ul class="help-list">
+          <li>
+            <span class="help-tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.8 3h4.4l.5 2.1 1.8 1 2-.6 2.2 3.8-1.5 1.5v2.4l1.5 1.5-2.2 3.8-2-.6-1.8 1-.5 2.1H9.8l-.5-2.1-1.8-1-2 .6-2.2-3.8 1.5-1.5v-2.4L3.3 9.3l2.2-3.8 2 .6 1.8-1L9.8 3Z"></path><circle cx="12" cy="12" r="3.1"></circle></svg></span>
+            <span>Change the number of rows and columns.</span>
+          </li>
+          <li>
+            <span class="help-tool-icon"><svg class="pointer-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5 18.2 12l-6.1 1.25L9 19.1 5 3.5Z"></path></svg></span>
+            <span>Move the grid, or scroll and pinch to zoom.</span>
+          </li>
+          <li>
+            <span class="help-tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg></span>
+            <span>Add walls, a starting point, keys, and matching locks.</span>
+          </li>
+          <li>
+            <span class="help-tool-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4.2 14.3 8.9-8.9a2 2 0 0 1 2.8 0l2.7 2.7a2 2 0 0 1 0 2.8l-8.9 8.9H5.8l-1.6-1.6a2.8 2.8 0 0 1 0-3.9Z"></path><path d="m10.2 8.3 5.5 5.5M9.7 19.8H20"></path></svg></span>
+            <span>Remove items from the grid.</span>
+          </li>
+          <li>
+            <span class="help-tool-icon help-play-icon"><span>▶</span></span>
+            <span>Find and animate the shortest path.</span>
+          </li>
+        </ul>
+        <button class="continue-button" id="continueButton" type="button">Continue</button>
+      </section>
+    </div>
     <script src="./app.js"></script>
   </body>
 </html>

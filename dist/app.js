@@ -28,6 +28,12 @@
     lockTool: $("#lockToolGlyph"),
     run: $("#runButton"),
     runIcon: $("#runIcon"),
+    resultPopover: $("#resultPopover"),
+    resultText: $("#resultText"),
+    helpButton: $("#helpButton"),
+    helpBackdrop: $("#helpBackdrop"),
+    helpDialog: $("#helpDialog"),
+    continueButton: $("#continueButton"),
     status: $("#statusMessage"),
     toast: $("#toast"),
   };
@@ -63,6 +69,7 @@
   let selectedKeyLetter = "a";
   let selectedLockLetter = null;
   let toastTimer;
+  let focusBeforeHelp = null;
 
   const keyIcon = () => `
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -324,6 +331,32 @@
     els.runIcon.textContent = "▶";
     els.run.setAttribute("aria-label", "Run breadth-first search");
     els.status.textContent = status;
+    hideResult();
+  }
+
+  function showResult(message) {
+    els.resultText.textContent = message;
+    els.resultPopover.hidden = false;
+  }
+
+  function hideResult() {
+    els.resultPopover.hidden = true;
+    els.resultText.textContent = "";
+  }
+
+  function openHelp() {
+    closePopovers();
+    focusBeforeHelp = document.activeElement;
+    els.helpBackdrop.hidden = false;
+    els.helpButton.setAttribute("aria-expanded", "true");
+    requestAnimationFrame(() => els.helpDialog.focus());
+  }
+
+  function closeHelp() {
+    els.helpBackdrop.hidden = true;
+    els.helpButton.setAttribute("aria-expanded", "false");
+    (focusBeforeHelp || els.helpButton).focus();
+    focusBeforeHelp = null;
   }
 
   function clearPath() {
@@ -336,6 +369,7 @@
     });
     [els.startDot, els.endDot].forEach((dot) => dot.classList.remove("visible"));
     els.spark.classList.remove("visible");
+    hideResult();
   }
 
   function setTool(tool) {
@@ -495,6 +529,7 @@
     if (!goal) {
       lastResult = { minimumSteps: -1, statesSeen: visited.size };
       els.status.textContent = visited.size >= 1_000_000 ? "State limit reached" : "No route";
+      showResult(visited.size >= 1_000_000 ? "Search limit reached" : "No path possible");
       return;
     }
 
@@ -582,6 +617,7 @@
     if (!animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       [els.halo, els.line].forEach((line) => { line.style.strokeDashoffset = 0; });
       els.endDot.classList.add("visible");
+      if (lastResult) showResult(`Minimum ${lastResult.minimumSteps} steps`);
       return;
     }
 
@@ -602,6 +638,7 @@
       pathAnimationFrame = 0;
       els.spark.classList.remove("visible");
       els.endDot.classList.add("visible");
+      if (lastResult) showResult(`Minimum ${lastResult.minimumSteps} steps`);
     };
     pathAnimationFrame = requestAnimationFrame(advance);
   }
@@ -661,6 +698,11 @@
       return;
     }
     solve();
+  });
+  els.helpButton.addEventListener("click", openHelp);
+  els.continueButton.addEventListener("click", closeHelp);
+  els.helpBackdrop.addEventListener("click", (event) => {
+    if (event.target === els.helpBackdrop) closeHelp();
   });
 
   document.addEventListener("pointerdown", (event) => {
@@ -723,6 +765,10 @@
       return;
     }
     if (event.key === "Escape") {
+      if (!els.helpBackdrop.hidden) {
+        closeHelp();
+        return;
+      }
       closePopovers();
       return;
     }

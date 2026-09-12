@@ -103,6 +103,35 @@ button, input { font: inherit; }
   backdrop-filter: blur(12px);
   transform: translateX(-50%);
 }
+.result-popover {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  min-width: max-content;
+  padding: 9px 13px;
+  border: 1px solid #d7d7d7;
+  border-radius: 11px;
+  background: rgba(255,255,255,.98);
+  box-shadow: 0 8px 28px rgba(0,0,0,.1);
+  color: #303030;
+  font-size: 14px;
+  line-height: 1;
+  transform: translateX(-50%);
+  transform-origin: bottom center;
+}
+.result-popover::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 9px;
+  height: 9px;
+  border-right: 1px solid #d7d7d7;
+  border-bottom: 1px solid #d7d7d7;
+  background: white;
+  transform: translateX(-50%) rotate(45deg);
+}
+.result-popover:not([hidden]) { animation: resultBubbleIn 340ms cubic-bezier(.2,.9,.25,1.25); }
 .popover-anchor { position: relative; display: grid; }
 .divider { width: 1px; height: 24px; margin: 0 3px; background: #e3e3e3; }
 button, input {
@@ -138,6 +167,56 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outl
 .run.running { background: #1e6a3f; }
 .run #runIcon { width: 23px; height: 23px; display: grid; place-items: center; line-height: 1; }
 .run #runIcon svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+.help-button {
+  position: fixed;
+  z-index: 20;
+  top: 20px;
+  right: 20px;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  color: #8a8a8a;
+}
+.help-button:hover { background: #f2f2f2; color: #666; }
+.help-button svg { width: 27px; height: 27px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.help-button .help-dot { fill: currentColor; stroke: none; }
+
+.help-backdrop {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(255,255,255,.74);
+  backdrop-filter: blur(3px);
+}
+.help-backdrop:not([hidden]) { animation: fadeIn 180ms ease-out; }
+.help-dialog {
+  width: min(480px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 28px 30px 24px;
+  border: 1px solid #d3d3d3;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 22px 70px rgba(0,0,0,.16);
+  color: #252525;
+  outline: none;
+  animation: helpDialogIn 260ms cubic-bezier(.2,.85,.25,1.1);
+}
+.help-dialog h1 { margin: 0 0 10px; font-size: 24px; font-weight: 500; line-height: 1.2; }
+.help-dialog > p { margin: 0; color: #595959; font-size: 15px; line-height: 1.55; }
+.help-list { display: grid; gap: 8px; margin: 22px 0 24px; padding: 0; list-style: none; }
+.help-list li { min-height: 42px; display: grid; grid-template-columns: 38px 1fr; align-items: center; gap: 12px; color: #444; font-size: 14px; line-height: 1.4; }
+.help-tool-icon { width: 38px; height: 38px; display: grid; place-items: center; border: 1px solid #e0e0e0; border-radius: 9px; color: #343434; }
+.help-tool-icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.help-play-icon { border: 0; background: #164c2f; color: white; font: 500 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.continue-button { min-width: 112px; display: block; margin: 0 auto; padding: 0 18px; background: #111; color: white; }
+.continue-button:hover { background: #333; }
 
 .popover {
   position: absolute;
@@ -188,6 +267,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outl
 
 @keyframes dotIn { from { opacity: 0; transform: scale(.55); } to { opacity: 1; transform: scale(1); } }
 @keyframes sparkPulse { 0%, 100% { r: 8px; opacity: .35; } 50% { r: 12px; opacity: .08; } }
+@keyframes resultBubbleIn {
+  0% { opacity: 0; transform: translateX(-50%) translateY(9px) scale(.84); }
+  70% { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.04); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes helpDialogIn { from { opacity: 0; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes centeredBubbleIn {
   0% { opacity: 0; transform: translateX(-50%) translateY(11px) scale(.72); }
   68% { opacity: 1; transform: translateX(-50%) translateY(-2px) scale(1.06); }
@@ -201,6 +287,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outl
 
 @media (max-width: 700px) {
   .toolbar { bottom: 14px; }
+  .help-button { top: 12px; right: 12px; }
+  .help-dialog { padding: 24px 20px 20px; }
   .divider { margin: 0 1px; }
   button { min-width: 36px; height: 36px; padding: 0 8px; }
   .lock-picker { left: auto; right: calc(100% + 9px); }
