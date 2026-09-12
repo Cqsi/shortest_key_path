@@ -18,7 +18,7 @@ button, input { font: inherit; }
 [hidden] { display: none !important; }
 
 .app { position: relative; width: 100%; height: 100%; overflow: hidden; }
-.grid-viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; }
+.grid-viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; cursor: var(--tool-cursor, crosshair); }
 .grid-viewport.pan-mode, .grid-viewport.pan-mode .cell { cursor: grab; }
 .grid-viewport.is-panning, .grid-viewport.is-panning .cell { cursor: grabbing; user-select: none; }
 .grid-stage { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
@@ -43,7 +43,7 @@ button, input { font: inherit; }
   border-radius: 0;
   background: white;
   color: var(--ink);
-  cursor: crosshair;
+  cursor: var(--tool-cursor, crosshair);
   overflow: hidden;
 }
 .cell:hover { background: #f8f8f8; }
@@ -136,8 +136,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--blue); outl
 .run { background: #164c2f; color: white; }
 .run:hover { background: #0f3f25; }
 .run.running { background: #1e6a3f; }
-.run #runIcon { width: 26px; height: 26px; display: grid; place-items: center; line-height: 1; }
-.run #runIcon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.run #runIcon { width: 23px; height: 23px; display: grid; place-items: center; line-height: 1; }
+.run #runIcon svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 
 .popover {
   position: absolute;

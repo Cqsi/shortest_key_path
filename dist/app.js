@@ -94,6 +94,32 @@
       <path d="M20 4v7h-7"></path>
     </svg>`;
 
+  function cursorData(shape, color = "#222222", hotX = 16, hotY = 16) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><g fill="white" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">${shape}</g></svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${hotX} ${hotY}, crosshair`;
+  }
+
+  function updateToolCursor() {
+    if (selectedTool === "pan") {
+      els.viewport.style.removeProperty("--tool-cursor");
+      return;
+    }
+    const shapes = {
+      erase: '<path d="m6 20 12-12a3 3 0 0 1 4.2 0l3.8 3.8a3 3 0 0 1 0 4.2L15 27H9l-3-3a2.8 2.8 0 0 1 0-4Z"/><path d="m13 13 8 8"/>',
+      wall: '<rect x="3.5" y="6" width="25" height="21" rx="1.5"/><path d="M3.5 13h25M3.5 20h25M12 6v7M21 6v7M9 13v7M18 13v7M25 13v7M12 20v7M21 20v7"/>',
+      start: '<circle cx="16" cy="9" r="4.2"/><path d="M7.5 27a8.5 8.5 0 0 1 17 0"/>',
+      key: '<circle cx="10" cy="21" r="5.2"/><path d="M13.7 17.3 27 4M20 11l3.5 3.5M23.5 7.5 27 11"/>',
+      lock: '<rect x="5" y="14" width="22" height="15" rx="3"/><path d="M10 14V9a6 6 0 0 1 12 0v5"/><circle cx="16" cy="21" r="1.4"/>',
+    };
+    const color = selectedTool === "key"
+      ? colorForLetter(selectedKeyLetter || nextUnusedKey() || "a")
+      : selectedTool === "lock"
+        ? colorForLetter(selectedLockLetter || availableLocks()[0] || "a")
+        : selectedTool === "start" ? "#3878b9" : selectedTool === "wall" ? "#505050" : "#222222";
+    const hotspot = selectedTool === "erase" ? [8, 25] : [16, 16];
+    els.viewport.style.setProperty("--tool-cursor", cursorData(shapes[selectedTool], color, ...hotspot));
+  }
+
   function colorForLetter(letter) {
     const index = letter.toLowerCase().charCodeAt(0) - 97;
     const hue = (20 + index * 137.508) % 360;
@@ -137,6 +163,7 @@
     els.lockTool.innerHTML = lockIcon();
     els.keyTool.style.color = colorForLetter(selectedKeyLetter || "a");
     els.lockTool.style.color = colorForLetter(previewLock);
+    updateToolCursor();
     $("#keyMenuButton").disabled = !selectedKeyLetter;
     renderLockChoices(lockLetters);
   }
@@ -320,6 +347,7 @@
       if (button.hasAttribute("aria-pressed")) button.setAttribute("aria-pressed", String(active));
     });
     els.addButton.classList.toggle("active", ["wall", "start", "key", "lock"].includes(tool));
+    updateToolCursor();
   }
 
   function valueForTool() {
